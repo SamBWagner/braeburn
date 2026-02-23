@@ -1,0 +1,69 @@
+import { buildHeaderLines } from "./header.js";
+import { buildActiveStepLines } from "./currentStep.js";
+import { buildOutputBoxLines } from "./outputBox.js";
+import { buildPromptLines } from "./prompt.js";
+import { buildVersionReportLines } from "./versionReport.js";
+import type { AppState } from "./state.js";
+
+let previousLineCount = 0;
+
+export function renderScreen(content: string): void {
+  if (previousLineCount > 0) {
+    process.stdout.write(`\x1b[${previousLineCount}A\x1b[J`);
+  }
+  process.stdout.write(content);
+  previousLineCount = (content.match(/\n/g) ?? []).length;
+}
+
+export function buildScreen(state: AppState): string {
+  const lines: string[] = [];
+
+  lines.push(
+    ...buildHeaderLines({
+      steps: state.steps,
+      version: state.version,
+      currentStepIndex: state.currentStepIndex,
+      currentPhase: state.currentPhase,
+      completedStepRecords: state.completedStepRecords,
+    })
+  );
+  lines.push("");
+
+  if (state.isFinished) {
+    if (state.versionReport) {
+      lines.push("");
+      lines.push(...buildVersionReportLines(state.versionReport));
+    }
+  } else {
+    const currentStep = state.steps[state.currentStepIndex];
+
+    if (currentStep) {
+      lines.push("");
+      lines.push(
+        ...buildActiveStepLines({
+          step: currentStep,
+          stepNumber: state.currentStepIndex + 1,
+          totalSteps: state.steps.length,
+          phase: state.currentPhase,
+        })
+      );
+
+      const isShowingOutput =
+        (state.currentPhase === "running" || state.currentPhase === "installing") &&
+        state.currentOutputLines.length > 0;
+
+      if (isShowingOutput) {
+        lines.push("");
+        lines.push(...buildOutputBoxLines(state.currentOutputLines, currentStep.name));
+      }
+
+      if (state.currentPrompt) {
+        lines.push("");
+        lines.push(...buildPromptLines(state.currentPrompt));
+      }
+    }
+  }
+
+  lines.push("");
+  return lines.join("\n") + "\n";
+}
