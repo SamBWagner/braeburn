@@ -1,6 +1,6 @@
 import { buildHeaderLines } from "./header.js";
 import { buildActiveStepLines } from "./currentStep.js";
-import { buildOutputBoxLines } from "./outputBox.js";
+import { buildOutputBoxLines, type TerminalDimensions } from "./outputBox.js";
 import { buildPromptLines } from "./prompt.js";
 import { buildVersionReportLines } from "./versionReport.js";
 import type { AppState } from "./state.js";
@@ -21,7 +21,7 @@ export function createScreenRenderer(
   };
 }
 
-export function buildScreen(state: AppState): string {
+export function buildScreen(state: AppState, terminalDimensions?: TerminalDimensions): string {
   const lines: string[] = [];
 
   lines.push(
@@ -32,6 +32,7 @@ export function buildScreen(state: AppState): string {
       currentStepIndex: state.currentStepIndex,
       currentPhase: state.currentPhase,
       completedStepRecords: state.completedStepRecords,
+      terminalDimensions,
     })
   );
   lines.push("");
@@ -61,7 +62,7 @@ export function buildScreen(state: AppState): string {
 
       if (isShowingOutput) {
         lines.push("");
-        lines.push(...buildOutputBoxLines(state.currentOutputLines, currentStep.name));
+        lines.push(...buildOutputBoxLines(state.currentOutputLines, currentStep.name, terminalDimensions));
       }
 
       if (state.currentPrompt) {

@@ -1,4 +1,4 @@
-import { checkCommandExists, runStep, type Step, type StepRunContext } from "./index.js";
+import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 
 const dotnetStep: Step = {
   id: "dotnet",
@@ -10,7 +10,7 @@ const dotnetStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    await runStep("dotnet tool update --global --all", context);
+    await context.runStep("dotnet tool update --global --all");
   },
 };
 

@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { checkPathExists, runStep, type Step, type StepRunContext } from "./index.js";
+import { checkPathExists, type Step, type StepRunContext } from "./index.js";
 
 const OH_MY_ZSH_UPGRADE_SCRIPT_PATH = join(
   homedir(),
@@ -19,7 +19,7 @@ const ohmyzshStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    await runStep(`zsh "${OH_MY_ZSH_UPGRADE_SCRIPT_PATH}"`, context);
+    await context.runStep(`zsh "${OH_MY_ZSH_UPGRADE_SCRIPT_PATH}"`);
   },
 };
 

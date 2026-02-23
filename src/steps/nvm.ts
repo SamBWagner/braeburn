@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { checkPathExists, runStep, type Step, type StepRunContext } from "./index.js";
+import { checkPathExists, type Step, type StepRunContext } from "./index.js";
 
 const NVM_DIRECTORY = join(homedir(), ".nvm");
 
@@ -19,9 +19,8 @@ const nvmStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    await runStep(
+    await context.runStep(
       `${NVM_SOURCE_PREFIX} && nvm install node --reinstall-packages-from=node`,
-      context
     );
   },
 };

@@ -1,9 +1,7 @@
 import {
-  runStep,
   type Step,
   type StepRunContext,
 } from "./index.js";
-import { captureShellCommandOutput } from "../runner.js";
 
 const macosStep: Step = {
   id: "macos",
@@ -15,7 +13,7 @@ const macosStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    const updateListOutput = await captureShellCommandOutput({
+    const updateListOutput = await context.captureOutput({
       shellCommand: "softwareupdate -l 2>&1",
     });
 
@@ -39,7 +37,7 @@ const macosStep: Step = {
       source: "stdout",
     });
 
-    await runStep("softwareupdate -ia --verbose", context);
+    await context.runStep("softwareupdate -ia --verbose");
   },
 };
 

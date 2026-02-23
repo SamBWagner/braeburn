@@ -1,4 +1,4 @@
-import { checkCommandExists, runStep, type Step, type StepRunContext } from "./index.js";
+import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 
 const npmStep: Step = {
   id: "npm",
@@ -10,7 +10,7 @@ const npmStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    await runStep("npm update -g", context);
+    await context.runStep("npm update -g");
   },
 };
 

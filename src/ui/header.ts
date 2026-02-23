@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { LOGO_ART } from "../logo.js";
 import type { Step } from "../steps/index.js";
 import type { StepPhase, CompletedStepRecord, LogoVisibility } from "./state.js";
+import type { TerminalDimensions } from "./outputBox.js";
 
 const LOGO_COLUMN_WIDTH = 32;
 const LOGO_SEPARATOR = "    ";
@@ -9,9 +10,12 @@ const MIN_SIDE_BY_SIDE_COLS = LOGO_COLUMN_WIDTH + LOGO_SEPARATOR.length + 20; //
 
 type LogoLayout = "side-by-side" | "stacked" | "none";
 
-function determineLogoLayout(logoLines: string[]): LogoLayout {
-  const cols = process.stdout.columns ?? 80;
-  const rows = process.stdout.rows ?? 24;
+export function determineLogoLayout(
+  logoLines: string[],
+  dimensions?: TerminalDimensions,
+): LogoLayout {
+  const cols = dimensions?.columns ?? process.stdout.columns ?? 80;
+  const rows = dimensions?.rows ?? process.stdout.rows ?? 24;
 
   if (cols >= MIN_SIDE_BY_SIDE_COLS) {
     return "side-by-side";
@@ -24,7 +28,7 @@ function determineLogoLayout(logoLines: string[]): LogoLayout {
   return "none";
 }
 
-function stepTrackerIcon(phase: StepPhase): string {
+export function stepTrackerIcon(phase: StepPhase): string {
   if (phase === "complete")                              return chalk.green("✓ ");
   if (phase === "failed")                               return chalk.red("✗ ");
   if (phase === "skipped" || phase === "not-available") return chalk.dim("– ");
@@ -39,7 +43,7 @@ function stepTrackerIcon(phase: StepPhase): string {
   return chalk.dim("· ");
 }
 
-function isActivePhase(phase: StepPhase): boolean {
+export function isActivePhase(phase: StepPhase): boolean {
   return (
     phase === "running" ||
     phase === "installing" ||
@@ -49,7 +53,7 @@ function isActivePhase(phase: StepPhase): boolean {
   );
 }
 
-function deriveAllStepPhases(
+export function deriveAllStepPhases(
   steps: Step[],
   currentStepIndex: number,
   currentPhase: StepPhase,
@@ -69,6 +73,7 @@ type BuildHeaderOptions = {
   currentStepIndex: number;
   currentPhase: StepPhase;
   completedStepRecords: CompletedStepRecord[];
+  terminalDimensions?: TerminalDimensions;
 };
 
 export function buildHeaderLines(options: BuildHeaderOptions): string[] {
@@ -92,7 +97,7 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
   }
 
   const logoLines = LOGO_ART.split("\n");
-  const layout = determineLogoLayout(logoLines);
+  const layout = determineLogoLayout(logoLines, options.terminalDimensions);
 
   if (layout === "none") {
     return rightColumnLines;

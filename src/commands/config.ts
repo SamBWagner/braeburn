@@ -65,7 +65,7 @@ type ConfigUpdateResult = {
   changes: ConfigChange[];
 };
 
-function applyConfigUpdates(
+export function applyConfigUpdates(
   config: BraeburnConfig,
   settingUpdates: Record<string, DesiredState>,
 ): ConfigUpdateResult {

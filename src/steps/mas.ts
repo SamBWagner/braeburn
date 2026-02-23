@@ -1,4 +1,4 @@
-import { checkCommandExists, runStep, type Step, type StepRunContext } from "./index.js";
+import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 
 const masStep: Step = {
   id: "mas",
@@ -11,7 +11,7 @@ const masStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    await runStep("mas upgrade", context);
+    await context.runStep("mas upgrade");
   },
 };
 

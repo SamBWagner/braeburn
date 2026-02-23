@@ -6,6 +6,7 @@ import { createInitialAppState } from "../ui/state.js";
 import { buildScreen, createScreenRenderer } from "../ui/screen.js";
 import { hideCursorDuringExecution } from "../ui/terminal.js";
 import type { Step } from "../steps/index.js";
+import { createDefaultStepRunContext } from "../steps/index.js";
 
 type PromptMode = "interactive" | "auto-accept";
 type LogoVisibility = "visible" | "hidden";
@@ -108,13 +109,13 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
     const stepLogWriter = await createLogWriterForStep(step.id);
 
     try {
-      await step.run({
-        onOutputLine: (line) => {
+      await step.run(createDefaultStepRunContext(
+        (line) => {
           state.currentOutputLines.push(line);
           renderScreen(buildScreen(state));
         },
-        logWriter: stepLogWriter,
-      });
+        stepLogWriter,
+      ));
       state.currentPhase = "complete";
       state.currentOutputLines = [];
       renderScreen(buildScreen(state));

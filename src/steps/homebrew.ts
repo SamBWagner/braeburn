@@ -1,4 +1,4 @@
-import { checkCommandExists, runStep, type Step, type StepRunContext } from "./index.js";
+import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 
 const homebrewStep: Step = {
   id: "homebrew",
@@ -10,7 +10,7 @@ const homebrewStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    await runStep("brew update && brew upgrade", context);
+    await context.runStep("brew update && brew upgrade");
   },
 };
 

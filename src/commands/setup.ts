@@ -6,11 +6,11 @@ import { createScreenRenderer } from "../ui/screen.js";
 import { hideCursorDuringExecution } from "../ui/terminal.js";
 import type { Step } from "../steps/index.js";
 
-type SelectionState = "selected" | "deselected";
-type ProtectionStatus = "protected" | "configurable";
-type AvailabilityStatus = "available" | "unavailable";
+export type SelectionState = "selected" | "deselected";
+export type ProtectionStatus = "protected" | "configurable";
+export type AvailabilityStatus = "available" | "unavailable";
 
-type SelectableStep = {
+export type SelectableStep = {
   step: Step;
   selection: SelectionState;
   protection: ProtectionStatus;
@@ -22,7 +22,7 @@ type KeypressKey = {
   ctrl?: boolean;
 };
 
-function buildLoadingScreen(): string {
+export function buildLoadingScreen(): string {
   const lines: string[] = [
     chalk.yellow(LOGO_ART),
     "",
@@ -34,7 +34,7 @@ function buildLoadingScreen(): string {
   return lines.join("\n") + "\n";
 }
 
-function buildSetupScreen(items: SelectableStep[], cursorIndex: number): string {
+export function buildSetupScreen(items: SelectableStep[], cursorIndex: number): string {
   const lines: string[] = [
     chalk.yellow(LOGO_ART),
     "",

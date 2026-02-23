@@ -1,24 +1,37 @@
 import chalk from "chalk";
 import type { CommandOutputLine } from "../runner.js";
 
+export type TerminalDimensions = { columns: number; rows: number };
+
 const INDENT = "  ";
 const HEADER_LINES_APPROXIMATE = 18;
 const OUTPUT_BOX_CHROME_LINES = 3;
 const MINIMUM_VISIBLE_LINES = 5;
 
-function maxVisibleLines(): number {
-  const rows = process.stdout.rows ?? 40;
+function maxVisibleLines(rows: number): number {
   const available = rows - HEADER_LINES_APPROXIMATE - OUTPUT_BOX_CHROME_LINES;
   return Math.max(MINIMUM_VISIBLE_LINES, available);
 }
 
-function boxWidth(): number {
-  return Math.min(process.stdout.columns ?? 80, 120) - INDENT.length * 2;
+function boxWidth(columns: number): number {
+  return Math.min(columns, 120) - INDENT.length * 2;
 }
 
-export function buildOutputBoxLines(lines: CommandOutputLine[], stepName: string): string[] {
-  const visibleLines = lines.slice(-maxVisibleLines());
-  const width = boxWidth();
+function resolveTerminalDimensions(dimensions?: TerminalDimensions): TerminalDimensions {
+  return dimensions ?? {
+    columns: process.stdout.columns ?? 80,
+    rows: process.stdout.rows ?? 40,
+  };
+}
+
+export function buildOutputBoxLines(
+  lines: CommandOutputLine[],
+  stepName: string,
+  dimensions?: TerminalDimensions,
+): string[] {
+  const resolved = resolveTerminalDimensions(dimensions);
+  const visibleLines = lines.slice(-maxVisibleLines(resolved.rows));
+  const width = boxWidth(resolved.columns);
 
   const headerLabel = `─ ${stepName} output `;
   const topDashes = "─".repeat(Math.max(0, width - headerLabel.length - 2));

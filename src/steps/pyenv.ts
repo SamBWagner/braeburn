@@ -1,10 +1,8 @@
 import {
   checkCommandExists,
-  runStep,
   type Step,
   type StepRunContext,
 } from "./index.js";
-import { captureShellCommandOutput } from "../runner.js";
 
 const FIND_LATEST_STABLE_PYTHON_SHELL_COMMAND =
   "pyenv install -l | grep -E '^\\s+3\\.[0-9]+\\.[0-9]+$' | grep -vE 'dev|a[0-9]|b[0-9]|rc[0-9]' | tail -1 | tr -d ' '";
@@ -20,9 +18,9 @@ const pyenvStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    await runStep("brew upgrade pyenv", context);
+    await context.runStep("brew upgrade pyenv");
 
-    const latestPythonVersion = await captureShellCommandOutput({
+    const latestPythonVersion = await context.captureOutput({
       shellCommand: FIND_LATEST_STABLE_PYTHON_SHELL_COMMAND,
     });
 
@@ -34,9 +32,8 @@ const pyenvStep: Step = {
       return;
     }
 
-    await runStep(
+    await context.runStep(
       `pyenv install --skip-existing ${latestPythonVersion}`,
-      context
     );
   },
 };
