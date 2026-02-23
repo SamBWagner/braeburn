@@ -7,7 +7,9 @@ type KeypressKey = {
   ctrl?: boolean;
 };
 
-export function captureYesNo(): Promise<boolean> {
+export type YesNoForceAnswer = "yes" | "no" | "force";
+
+export function captureYesNo(): Promise<YesNoForceAnswer> {
   return new Promise((resolve) => {
     readline.emitKeypressEvents(process.stdin);
 
@@ -23,8 +25,9 @@ export function captureYesNo(): Promise<boolean> {
 
       const isConfirm = character === "y" || character === "Y" || key?.name === "return";
       const isDecline = character === "n" || character === "N";
+      const isForce = character === "f" || character === "F";
 
-      if (!isConfirm && !isDecline) return;
+      if (!isConfirm && !isDecline && !isForce) return;
 
       process.stdin.removeListener("keypress", handleKeypress);
 
@@ -33,7 +36,10 @@ export function captureYesNo(): Promise<boolean> {
       }
 
       process.stdin.pause();
-      resolve(isConfirm);
+
+      if (isForce) resolve("force");
+      else if (isConfirm) resolve("yes");
+      else resolve("no");
     };
 
     process.stdin.on("keypress", handleKeypress);
@@ -49,6 +55,6 @@ export function buildPromptLines(prompt: CurrentPrompt): string[] {
     lines.push("");
   }
 
-  lines.push(`  ${chalk.cyan("?")}  ${prompt.question} ${chalk.dim("[Y/n]")}`);
+  lines.push(`  ${chalk.cyan("?")}  ${prompt.question} ${chalk.dim("[Y/n/f]")}`);
   return lines;
 }

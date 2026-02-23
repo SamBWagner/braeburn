@@ -13,7 +13,8 @@ type RunUpdateCommandOptions = {
 };
 
 export async function runUpdateCommand(options: RunUpdateCommandOptions): Promise<void> {
-  const { steps, autoYes, version } = options;
+  const { steps, version } = options;
+  let autoYes = options.autoYes;
   const state = createInitialAppState(steps, version);
 
   process.stdout.write("\x1b[?25l");
@@ -50,7 +51,9 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
       };
       renderScreen(buildScreen(state));
 
-      const shouldInstall = autoYes || (await captureYesNo());
+      const installAnswer = autoYes ? "yes" : await captureYesNo();
+      if (installAnswer === "force") autoYes = true;
+      const shouldInstall = installAnswer !== "no";
       state.currentPrompt = undefined;
 
       if (!shouldInstall) {
@@ -90,7 +93,9 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
     state.currentPrompt = { question: `Run ${step.name} update?`, warning: pipWarning };
     renderScreen(buildScreen(state));
 
-    const shouldRun = autoYes || (await captureYesNo());
+    const runAnswer = autoYes ? "yes" : await captureYesNo();
+    if (runAnswer === "force") autoYes = true;
+    const shouldRun = runAnswer !== "no";
     state.currentPrompt = undefined;
 
     if (!shouldRun) {
