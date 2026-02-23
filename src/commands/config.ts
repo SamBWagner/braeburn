@@ -3,8 +3,10 @@ import {
   readConfig,
   writeConfig,
   resolveConfigPath,
+  isSettingEnabled,
   isStepEnabled,
   isLogoEnabled,
+  applySettingToConfig,
   PROTECTED_STEP_IDS,
   type BraeburnConfig,
 } from "../config.js";
@@ -14,9 +16,10 @@ type RunConfigCommandOptions = {
   allSteps: Step[];
 };
 
+type DesiredState = "enable" | "disable";
+
 type RunConfigUpdateCommandOptions = {
-  stepUpdates: Record<string, boolean>;
-  logoUpdate: boolean | undefined;
+  settingUpdates: Record<string, DesiredState>;
   allSteps: Step[];
 };
 
@@ -55,11 +58,36 @@ export async function runConfigCommand(options: RunConfigCommandOptions): Promis
   process.stdout.write(`\n`);
 }
 
-export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOptions): Promise<void> {
-  const { stepUpdates, logoUpdate, allSteps } = options;
+type ConfigChange = { label: string; from: DesiredState; to: DesiredState };
 
-  if (Object.keys(stepUpdates).length === 0 && logoUpdate === undefined) {
-    const configurableSteps = allSteps.filter((s) => !PROTECTED_STEP_IDS.has(s.id));
+type ConfigUpdateResult = {
+  updatedConfig: BraeburnConfig;
+  changes: ConfigChange[];
+};
+
+function applyConfigUpdates(
+  config: BraeburnConfig,
+  settingUpdates: Record<string, DesiredState>,
+): ConfigUpdateResult {
+  let updatedConfig = config;
+  const changes: ConfigChange[] = [];
+
+  for (const [settingId, desiredState] of Object.entries(settingUpdates)) {
+    const currentState: DesiredState = isSettingEnabled(config, settingId) ? "enable" : "disable";
+    if (currentState !== desiredState) {
+      changes.push({ label: settingId, from: currentState, to: desiredState });
+    }
+    updatedConfig = applySettingToConfig(updatedConfig, settingId, desiredState);
+  }
+
+  return { updatedConfig, changes };
+}
+
+export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOptions): Promise<void> {
+  const { settingUpdates, allSteps } = options;
+
+  if (Object.keys(settingUpdates).length === 0) {
+    const configurableSteps = allSteps.filter((step) => !PROTECTED_STEP_IDS.has(step.id));
 
     process.stdout.write(
       "No changes — pass flags to enable or disable steps:\n\n"
@@ -87,35 +115,9 @@ export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOpti
   }
 
   const config = await readConfig();
-  const changes: Array<{ label: string; from: boolean; to: boolean }> = [];
+  const { updatedConfig, changes } = applyConfigUpdates(config, settingUpdates);
 
-  if (logoUpdate !== undefined) {
-    const currentlyEnabled = isLogoEnabled(config);
-    if (currentlyEnabled !== logoUpdate) {
-      changes.push({ label: "logo", from: currentlyEnabled, to: logoUpdate });
-    }
-    if (logoUpdate) {
-      delete config.logo;
-    } else {
-      config.logo = false;
-    }
-  }
-
-  for (const [stepId, newEnabled] of Object.entries(stepUpdates)) {
-    const currentlyEnabled = isStepEnabled(config, stepId);
-    if (currentlyEnabled !== newEnabled) {
-      changes.push({ label: stepId, from: currentlyEnabled, to: newEnabled });
-    }
-    if (newEnabled) {
-      // Re-enabling: remove from config so absent = enabled (keeps file minimal)
-      delete config.steps[stepId];
-    } else {
-      config.steps[stepId] = false;
-    }
-  }
-
-  // Write even if no visible changes, in case the user is re-confirming state
-  await writeCleanConfig(config);
+  await writeCleanConfig(updatedConfig);
 
   if (changes.length === 0) {
     process.stdout.write("No changes — already set as requested.\n");
@@ -123,8 +125,8 @@ export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOpti
   }
 
   for (const { label, from, to } of changes) {
-    const fromLabel = from ? chalk.green("enabled") : chalk.red("disabled");
-    const toLabel = to ? chalk.green("enabled") : chalk.red("disabled");
+    const fromLabel = from === "enable" ? chalk.green("enabled") : chalk.red("disabled");
+    const toLabel = to === "enable" ? chalk.green("enabled") : chalk.red("disabled");
     process.stdout.write(`  ${label.padEnd(12)} ${fromLabel} → ${toLabel}\n`);
   }
 

@@ -5,14 +5,20 @@ import { buildPromptLines } from "./prompt.js";
 import { buildVersionReportLines } from "./versionReport.js";
 import type { AppState } from "./state.js";
 
-let previousLineCount = 0;
+export type ScreenRenderer = (content: string) => void;
 
-export function renderScreen(content: string): void {
-  if (previousLineCount > 0) {
-    process.stdout.write(`\x1b[${previousLineCount}A\x1b[J`);
-  }
-  process.stdout.write(content);
-  previousLineCount = (content.match(/\n/g) ?? []).length;
+export function createScreenRenderer(
+  output: NodeJS.WritableStream = process.stdout,
+): ScreenRenderer {
+  let previousLineCount = 0;
+
+  return (content: string): void => {
+    if (previousLineCount > 0) {
+      output.write(`\x1b[${previousLineCount}A\x1b[J`);
+    }
+    output.write(content);
+    previousLineCount = (content.match(/\n/g) ?? []).length;
+  };
 }
 
 export function buildScreen(state: AppState): string {
@@ -22,7 +28,7 @@ export function buildScreen(state: AppState): string {
     ...buildHeaderLines({
       steps: state.steps,
       version: state.version,
-      showLogo: state.showLogo,
+      logoVisibility: state.logoVisibility,
       currentStepIndex: state.currentStepIndex,
       currentPhase: state.currentPhase,
       completedStepRecords: state.completedStepRecords,
@@ -30,7 +36,7 @@ export function buildScreen(state: AppState): string {
   );
   lines.push("");
 
-  if (state.isFinished) {
+  if (state.runCompletion === "finished") {
     if (state.versionReport) {
       lines.push("");
       lines.push(...buildVersionReportLines(state.versionReport));

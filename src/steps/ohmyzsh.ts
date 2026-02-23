@@ -13,7 +13,6 @@ const ohmyzshStep: Step = {
   id: "ohmyzsh",
   name: "Oh My Zsh",
   description: "Update Oh My Zsh to the latest version",
-  // No brewPackageToInstall — Oh My Zsh is installed via a curl script, not Homebrew
 
   async checkIsAvailable(): Promise<boolean> {
     return checkPathExists(OH_MY_ZSH_UPGRADE_SCRIPT_PATH);

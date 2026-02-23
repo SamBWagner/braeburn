@@ -58,7 +58,7 @@ program
   .description("Run system update steps (default command)")
   .argument(
     "[steps...]",
-    `Steps to run — omit to run all.\nAvailable: ${ALL_STEPS.map((s) => s.id).join(", ")}`
+    `Steps to run — omit to run all.\nAvailable: ${ALL_STEPS.map((step) => step.id).join(", ")}`
   )
   .option("-y, --yes", "Auto-accept all prompts (default yes to everything)")
   .option("-f, --force", "Alias for --yes")
@@ -90,7 +90,6 @@ Examples:
     async (stepArguments: string[], options: { yes?: boolean; force?: boolean; logo?: boolean }) => {
       const autoYes = options.yes === true || options.force === true;
 
-      // First-run: if no config file exists yet, show the setup wizard.
       if (!(await configFileExists())) {
         await runSetupCommand(ALL_STEPS);
       }
@@ -102,19 +101,16 @@ Examples:
           ? ALL_STEPS
           : resolveStepsByIds(stepArguments);
 
-      // When no explicit steps are requested, filter out steps disabled in config.
-      // Explicit step arguments always bypass config (user knows what they want).
       if (stepArguments.length === 0) {
         stepsToRun = stepsToRun.filter((step) => isStepEnabled(config, step.id));
       }
 
-      // CLI --no-logo overrides config; otherwise defer to config preference.
-      const showLogo = options.logo !== false && isLogoEnabled(config);
+      const logoIsEnabled = options.logo !== false && isLogoEnabled(config);
 
       await runUpdateCommand({
         steps: stepsToRun,
-        autoYes,
-        showLogo,
+        promptMode: autoYes ? "auto-accept" : "interactive",
+        logoVisibility: logoIsEnabled ? "visible" : "hidden",
         version: BRAEBURN_VERSION,
       });
     }
@@ -171,7 +167,7 @@ const configCommand = program
     await runConfigCommand({ allSteps: ALL_STEPS });
   });
 
-const configurableSteps = ALL_STEPS.filter((s) => !PROTECTED_STEP_IDS.has(s.id));
+const configurableSteps = ALL_STEPS.filter((step) => !PROTECTED_STEP_IDS.has(step.id));
 
 const configUpdateCommand = configCommand
   .command("update")
@@ -196,23 +192,22 @@ for (const step of configurableSteps) {
 }
 
 configUpdateCommand.action(function () {
-  // Use getOptionValueSource to detect only flags explicitly passed on the CLI.
-  // Commander defaults --no-* to true, so we can't rely on option values alone.
-  const stepUpdates: Record<string, boolean> = {};
+  // Commander defaults --no-* to true, so we use getOptionValueSource to detect explicit CLI flags.
+  const settingUpdates: Record<string, "enable" | "disable"> = {};
 
   for (const step of configurableSteps) {
     const source = configUpdateCommand.getOptionValueSource(step.id);
     if (source === "cli") {
-      stepUpdates[step.id] = configUpdateCommand.opts()[step.id] as boolean;
+      settingUpdates[step.id] = configUpdateCommand.opts()[step.id] ? "enable" : "disable";
     }
   }
 
   const logoSource = configUpdateCommand.getOptionValueSource("logo");
-  const logoUpdate = logoSource === "cli"
-    ? (configUpdateCommand.opts().logo as boolean)
-    : undefined;
+  if (logoSource === "cli") {
+    settingUpdates["logo"] = configUpdateCommand.opts().logo ? "enable" : "disable";
+  }
 
-  runConfigUpdateCommand({ stepUpdates, logoUpdate, allSteps: ALL_STEPS });
+  runConfigUpdateCommand({ settingUpdates, allSteps: ALL_STEPS });
 });
 
 function resolveStepsByIds(stepIds: string[]): Step[] {

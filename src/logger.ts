@@ -3,26 +3,27 @@ import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const BRAEBURN_LOG_DIRECTORY = join(homedir(), ".braeburn", "logs");
+const DEFAULT_LOG_DIRECTORY = join(homedir(), ".braeburn", "logs");
 
 export type StepLogWriter = (line: string) => Promise<void>;
 
-async function ensureLogDirectoryExists(): Promise<void> {
-  if (existsSync(BRAEBURN_LOG_DIRECTORY)) {
+async function ensureDirectoryExists(directoryPath: string): Promise<void> {
+  if (existsSync(directoryPath)) {
     return;
   }
 
-  await mkdir(BRAEBURN_LOG_DIRECTORY, { recursive: true });
+  await mkdir(directoryPath, { recursive: true });
 }
 
 export async function createLogWriterForStep(
-  stepId: string
+  stepId: string,
+  logDirectory: string = DEFAULT_LOG_DIRECTORY,
 ): Promise<StepLogWriter> {
-  await ensureLogDirectoryExists();
+  await ensureDirectoryExists(logDirectory);
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const logFilePath = join(
-    BRAEBURN_LOG_DIRECTORY,
+    logDirectory,
     `${stepId}-${timestamp}.log`
   );
 
@@ -33,30 +34,35 @@ export async function createLogWriterForStep(
   return writeLineToLog;
 }
 
-export function findLatestLogFileForStep(stepId: string): string | null {
-  if (!existsSync(BRAEBURN_LOG_DIRECTORY)) {
+export function findLatestLogFileForStep(
+  stepId: string,
+  logDirectory: string = DEFAULT_LOG_DIRECTORY,
+): string | null {
+  if (!existsSync(logDirectory)) {
     return null;
   }
 
-  const allFiles = readdirSync(BRAEBURN_LOG_DIRECTORY);
+  const allFiles = readdirSync(logDirectory);
   const filesForThisStep = allFiles
     .filter((fileName: string) => fileName.startsWith(`${stepId}-`))
     .sort()
-    .reverse(); // most recent first
+    .reverse();
 
   if (filesForThisStep.length === 0) {
     return null;
   }
 
-  return join(BRAEBURN_LOG_DIRECTORY, filesForThisStep[0]);
+  return join(logDirectory, filesForThisStep[0]);
 }
 
-export function listAllStepIdsWithLogs(): string[] {
-  if (!existsSync(BRAEBURN_LOG_DIRECTORY)) {
+export function listAllStepIdsWithLogs(
+  logDirectory: string = DEFAULT_LOG_DIRECTORY,
+): string[] {
+  if (!existsSync(logDirectory)) {
     return [];
   }
 
-  const allFiles = readdirSync(BRAEBURN_LOG_DIRECTORY);
+  const allFiles = readdirSync(logDirectory);
 
   const stepIds = new Set<string>(
     allFiles

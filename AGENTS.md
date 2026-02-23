@@ -92,16 +92,24 @@ written. Every other principle below serves this goal.
 
 ### No Boolean Parameters
 
-Boolean parameters obscure the meaning of a call site. Use discriminated unions or named
-options objects instead.
+Boolean parameters obscure the meaning of a call site — a bare `true` or `false` tells the
+reader nothing about intent. This applies to positional parameters, boolean fields in options
+objects, and boolean values in data structures like `Record<string, boolean>`. Use descriptive
+string literal unions instead.
 
 ```ts
 // Bad — what does `true` mean here?
 runStep(step, true)
+applyUpdates(config, stepUpdates, true)
+
+// Also bad — boolean field in an options object is still opaque at the call site
+type Options = { showLogo: boolean }
+runUpdate({ showLogo: true })
 
 // Good — the call site is self-documenting
 runStep(step, { mode: "dry-run" })
-runStep(step, { mode: "live" })
+runUpdate({ logoVisibility: "visible" })
+applyUpdates({ config, stepUpdates, logoUpdate: "enable" })
 ```
 
 ### Avoid Side Effects

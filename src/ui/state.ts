@@ -28,30 +28,38 @@ export type ResolvedVersion = {
   value: string;
 };
 
+export type LogoVisibility = "visible" | "hidden";
+
+export type RunCompletion = "in-progress" | "finished";
+
 export type AppState = {
   steps: Step[];
   version: string;
-  showLogo: boolean;
+  logoVisibility: LogoVisibility;
   currentStepIndex: number;
   currentPhase: StepPhase;
   completedStepRecords: CompletedStepRecord[];
   currentOutputLines: CommandOutputLine[];
   currentPrompt: CurrentPrompt | undefined;
-  isFinished: boolean;
+  runCompletion: RunCompletion;
   versionReport: ResolvedVersion[] | undefined;
 };
 
-export function createInitialAppState(steps: Step[], version: string, showLogo: boolean): AppState {
+export function createInitialAppState(
+  steps: Step[],
+  version: string,
+  logoVisibility: LogoVisibility,
+): AppState {
   return {
     steps,
     version,
-    showLogo,
+    logoVisibility,
     currentStepIndex: 0,
     currentPhase: "checking-availability",
     completedStepRecords: [],
     currentOutputLines: [],
     currentPrompt: undefined,
-    isFinished: false,
+    runCompletion: "in-progress",
     versionReport: undefined,
   };
 }

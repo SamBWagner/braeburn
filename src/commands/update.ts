@@ -3,34 +3,34 @@ import { createLogWriterForStep } from "../logger.js";
 import { collectVersions } from "../ui/versionReport.js";
 import { captureYesNo } from "../ui/prompt.js";
 import { createInitialAppState } from "../ui/state.js";
-import { buildScreen, renderScreen } from "../ui/screen.js";
+import { buildScreen, createScreenRenderer } from "../ui/screen.js";
+import { hideCursorDuringExecution } from "../ui/terminal.js";
 import type { Step } from "../steps/index.js";
+
+type PromptMode = "interactive" | "auto-accept";
+type LogoVisibility = "visible" | "hidden";
 
 type RunUpdateCommandOptions = {
   steps: Step[];
-  autoYes: boolean;
-  showLogo: boolean;
+  promptMode: PromptMode;
+  logoVisibility: LogoVisibility;
   version: string;
 };
 
 export async function runUpdateCommand(options: RunUpdateCommandOptions): Promise<void> {
   const { steps, version } = options;
-  let autoYes = options.autoYes;
-  const state = createInitialAppState(steps, version, options.showLogo);
+  let autoAccept = options.promptMode === "auto-accept";
+  const state = createInitialAppState(steps, version, options.logoVisibility);
+  const renderScreen = createScreenRenderer();
 
-  process.stdout.write("\x1b[?25l");
-  process.on("exit", () => process.stdout.write("\x1b[?25h"));
-  process.on("SIGINT", () => {
-    process.stdout.write("\x1b[?25h\n");
-    process.exit(130);
-  });
+  hideCursorDuringExecution();
 
   renderScreen(buildScreen(state));
 
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
+  for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+    const step = steps[stepIndex];
 
-    state.currentStepIndex = i;
+    state.currentStepIndex = stepIndex;
     state.currentPhase = "checking-availability";
     state.currentOutputLines = [];
     state.currentPrompt = undefined;
@@ -52,8 +52,8 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
       };
       renderScreen(buildScreen(state));
 
-      const installAnswer = autoYes ? "yes" : await captureYesNo();
-      if (installAnswer === "force") autoYes = true;
+      const installAnswer = autoAccept ? "yes" : await captureYesNo();
+      if (installAnswer === "force") autoAccept = true;
       const shouldInstall = installAnswer !== "no";
       state.currentPrompt = undefined;
 
@@ -85,17 +85,12 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
       }
     }
 
-    const pipWarning =
-      step.id === "pip"
-        ? "This updates all global pip3 packages, which can occasionally break tools."
-        : undefined;
-
     state.currentPhase = "prompting-to-run";
-    state.currentPrompt = { question: `Run ${step.name} update?`, warning: pipWarning };
+    state.currentPrompt = { question: `Run ${step.name} update?`, warning: step.warning };
     renderScreen(buildScreen(state));
 
-    const runAnswer = autoYes ? "yes" : await captureYesNo();
-    if (runAnswer === "force") autoYes = true;
+    const runAnswer = autoAccept ? "yes" : await captureYesNo();
+    if (runAnswer === "force") autoAccept = true;
     const shouldRun = runAnswer !== "no";
     state.currentPrompt = undefined;
 
@@ -133,7 +128,7 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
     }
   }
 
-  state.isFinished = true;
+  state.runCompletion = "finished";
   state.currentOutputLines = [];
   state.currentPrompt = undefined;
   renderScreen(buildScreen(state));

@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { LOGO_ART } from "../logo.js";
 import type { Step } from "../steps/index.js";
-import type { StepPhase, CompletedStepRecord } from "./state.js";
+import type { StepPhase, CompletedStepRecord, LogoVisibility } from "./state.js";
 
 const LOGO_COLUMN_WIDTH = 32;
 const LOGO_SEPARATOR = "    ";
@@ -17,7 +17,6 @@ function determineLogoLayout(logoLines: string[]): LogoLayout {
     return "side-by-side";
   }
 
-  // Not wide enough for side-by-side — stack if there are enough rows.
   if (rows >= logoLines.length + 6) {
     return "stacked";
   }
@@ -56,7 +55,7 @@ function deriveAllStepPhases(
   currentPhase: StepPhase,
   completedStepRecords: CompletedStepRecord[]
 ): StepPhase[] {
-  return steps.map((_, index) => {
+  return steps.map((_step, index) => {
     if (index < completedStepRecords.length) return completedStepRecords[index].phase;
     if (index === currentStepIndex) return currentPhase;
     return "pending";
@@ -66,14 +65,14 @@ function deriveAllStepPhases(
 type BuildHeaderOptions = {
   steps: Step[];
   version: string;
-  showLogo: boolean;
+  logoVisibility: LogoVisibility;
   currentStepIndex: number;
   currentPhase: StepPhase;
   completedStepRecords: CompletedStepRecord[];
 };
 
 export function buildHeaderLines(options: BuildHeaderOptions): string[] {
-  const { steps, version, showLogo, currentStepIndex, currentPhase, completedStepRecords } = options;
+  const { steps, version, logoVisibility, currentStepIndex, currentPhase, completedStepRecords } = options;
 
   const phases = deriveAllStepPhases(steps, currentStepIndex, currentPhase, completedStepRecords);
 
@@ -88,7 +87,7 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
     }),
   ];
 
-  if (!showLogo) {
+  if (logoVisibility === "hidden") {
     return rightColumnLines;
   }
 
@@ -107,16 +106,14 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
     ];
   }
 
-  // side-by-side
   const totalLines = Math.max(logoLines.length, rightColumnLines.length);
   const result: string[] = [];
 
-  for (let i = 0; i < totalLines; i++) {
-    // Pad the raw logo line to a fixed width before applying colour, so the
-    // ANSI escape codes don't affect visual alignment.
-    const rawLogoLine = (logoLines[i] ?? "").padEnd(LOGO_COLUMN_WIDTH);
+  for (let lineIndex = 0; lineIndex < totalLines; lineIndex++) {
+    // Padding must happen before chalk; ANSI escape codes break .padEnd() alignment.
+    const rawLogoLine = (logoLines[lineIndex] ?? "").padEnd(LOGO_COLUMN_WIDTH);
     const logoColumn = chalk.yellow(rawLogoLine);
-    const rightColumn = rightColumnLines[i] ?? "";
+    const rightColumn = rightColumnLines[lineIndex] ?? "";
     result.push(`${logoColumn}${LOGO_SEPARATOR}${rightColumn}`);
   }
 

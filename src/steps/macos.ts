@@ -5,7 +5,6 @@ import {
 } from "./index.js";
 import { captureShellCommandOutput } from "../runner.js";
 
-// softwareupdate always exists on macOS — no availability check needed
 const macosStep: Step = {
   id: "macos",
   name: "macOS",
@@ -29,15 +28,15 @@ const macosStep: Step = {
     if (noUpdatesAvailable) {
       context.onOutputLine({
         text: "macOS is already up to date.",
-        isError: false,
+        source: "stdout",
       });
       return;
     }
 
-    context.onOutputLine({ text: updateListOutput, isError: false });
+    context.onOutputLine({ text: updateListOutput, source: "stdout" });
     context.onOutputLine({
       text: "Updates found — installing now...",
-      isError: false,
+      source: "stdout",
     });
 
     await runStep("softwareupdate -ia --verbose", context);

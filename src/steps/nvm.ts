@@ -13,7 +13,6 @@ const nvmStep: Step = {
   name: "Node.js (nvm)",
   description:
     "Install the latest Node.js via nvm, migrating packages from the current version",
-  // No brewPackageToInstall — nvm is installed via a curl script, not Homebrew
 
   async checkIsAvailable(): Promise<boolean> {
     return checkPathExists(NVM_DIRECTORY);

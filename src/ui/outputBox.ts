@@ -29,7 +29,7 @@ export function buildOutputBoxLines(lines: CommandOutputLine[], stepName: string
 
   for (const line of visibleLines) {
     const truncated = line.text.slice(0, width - 4);
-    const colored = line.isError ? chalk.yellow(truncated) : chalk.dim(truncated);
+    const colored = line.source === "stderr" ? chalk.yellow(truncated) : chalk.dim(truncated);
     result.push(`${INDENT}${chalk.dim("│")} ${colored}`);
   }
 

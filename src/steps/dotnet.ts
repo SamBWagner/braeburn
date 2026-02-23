@@ -4,7 +4,6 @@ const dotnetStep: Step = {
   id: "dotnet",
   name: ".NET",
   description: "Update all globally installed .NET tools",
-  // No brewPackageToInstall — .NET has its own installer
 
   async checkIsAvailable(): Promise<boolean> {
     return checkCommandExists("dotnet");

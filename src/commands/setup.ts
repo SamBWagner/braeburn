@@ -2,30 +2,25 @@ import readline from "node:readline";
 import chalk from "chalk";
 import { writeConfig, PROTECTED_STEP_IDS } from "../config.js";
 import { LOGO_ART } from "../logo.js";
+import { createScreenRenderer } from "../ui/screen.js";
+import { hideCursorDuringExecution } from "../ui/terminal.js";
 import type { Step } from "../steps/index.js";
+
+type SelectionState = "selected" | "deselected";
+type ProtectionStatus = "protected" | "configurable";
+type AvailabilityStatus = "available" | "unavailable";
 
 type SelectableStep = {
   step: Step;
-  selected: boolean;
-  isProtected: boolean;
-  isAvailable: boolean;
+  selection: SelectionState;
+  protection: ProtectionStatus;
+  availability: AvailabilityStatus;
 };
 
 type KeypressKey = {
   name?: string;
   ctrl?: boolean;
 };
-
-// Module-level render state (scoped to this screen, separate from update screen)
-let prevLines = 0;
-
-function render(content: string): void {
-  if (prevLines > 0) {
-    process.stdout.write(`\x1b[${prevLines}A\x1b[J`);
-  }
-  process.stdout.write(content);
-  prevLines = (content.match(/\n/g) ?? []).length;
-}
 
 function buildLoadingScreen(): string {
   const lines: string[] = [
@@ -52,20 +47,20 @@ function buildSetupScreen(items: SelectableStep[], cursorIndex: number): string 
     "",
   ];
 
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const isCursor = i === cursorIndex;
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    const item = items[itemIndex];
+    const isCursor = itemIndex === cursorIndex;
 
     const cursor = isCursor ? chalk.cyan("\u203a") : " ";
-    const checkbox = item.selected ? chalk.green("\u25cf") : chalk.dim("\u25cb");
+    const checkbox = item.selection === "selected" ? chalk.green("\u25cf") : chalk.dim("\u25cb");
 
     const namePadded = item.step.name.padEnd(18);
     const name = isCursor ? chalk.bold.white(namePadded) : chalk.white(namePadded);
 
     let status: string;
-    if (item.isProtected) {
+    if (item.protection === "protected") {
       status = chalk.dim("required");
-    } else if (item.isAvailable) {
+    } else if (item.availability === "available") {
       status = chalk.green("installed");
     } else if (item.step.brewPackageToInstall) {
       status = chalk.yellow(`not installed`) + chalk.dim(`  \u2192 will offer to install via Homebrew`);
@@ -80,7 +75,7 @@ function buildSetupScreen(items: SelectableStep[], cursorIndex: number): string 
     }
   }
 
-  const enabledCount = items.filter((i) => i.selected).length;
+  const enabledCount = items.filter((item) => item.selection === "selected").length;
   lines.push("");
   lines.push(`  ${chalk.dim(`${enabledCount} of ${items.length} tools selected`)}`);
   lines.push("");
@@ -89,40 +84,33 @@ function buildSetupScreen(items: SelectableStep[], cursorIndex: number): string 
 }
 
 export async function runSetupCommand(allSteps: Step[]): Promise<void> {
-  // Hide cursor; restore on exit
-  process.stdout.write("\x1b[?25l");
-  process.on("exit", () => process.stdout.write("\x1b[?25h"));
-  process.on("SIGINT", () => {
-    process.stdout.write("\x1b[?25h\n");
-    process.exit(130);
-  });
+  const render = createScreenRenderer();
 
-  // Show loading screen while we check availability in parallel
+  hideCursorDuringExecution();
+
   render(buildLoadingScreen());
 
   const availabilityResults = await Promise.all(
     allSteps.map((step) => step.checkIsAvailable())
   );
 
-  const items: SelectableStep[] = allSteps.map((step, i) => ({
+  const items: SelectableStep[] = allSteps.map((step, stepIndex) => ({
     step,
-    selected: true, // all enabled by default — user opts out
-    isProtected: PROTECTED_STEP_IDS.has(step.id),
-    isAvailable: availabilityResults[i],
+    selection: "selected",
+    protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
+    availability: availabilityResults[stepIndex] ? "available" : "unavailable",
   }));
 
   let cursorIndex = 0;
 
   render(buildSetupScreen(items, cursorIndex));
 
-  // Interactive selection loop
   await new Promise<void>((resolve) => {
     readline.emitKeypressEvents(process.stdin);
     if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
     const handleKeypress = (_char: string, key: KeypressKey) => {
       if (key?.ctrl && key?.name === "c") {
-        process.stdout.write("\x1b[?25h\n");
         process.exit(130);
       }
 
@@ -134,8 +122,8 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
         render(buildSetupScreen(items, cursorIndex));
       } else if (key?.name === "space") {
         const item = items[cursorIndex];
-        if (!item.isProtected) {
-          item.selected = !item.selected;
+        if (item.protection === "configurable") {
+          item.selection = item.selection === "selected" ? "deselected" : "selected";
           render(buildSetupScreen(items, cursorIndex));
         }
       } else if (key?.name === "return") {
@@ -150,30 +138,21 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
     process.stdin.resume();
   });
 
-  // Restore cursor
-  process.stdout.write("\x1b[?25h");
-
-  // Persist choices — only write explicit false entries (keeps file minimal, matches
-  // the opt-out convention used everywhere else in the codebase)
   const stepsConfig: Record<string, boolean> = {};
   for (const item of items) {
-    if (!item.isProtected && !item.selected) {
+    if (item.protection === "configurable" && item.selection === "deselected") {
       stepsConfig[item.step.id] = false;
     }
   }
   await writeConfig({ steps: stepsConfig });
 
-  // Clear the setup screen and print a brief confirmation before the update starts
-  if (prevLines > 0) {
-    process.stdout.write(`\x1b[${prevLines}A\x1b[J`);
-  }
-  process.stdout.write(chalk.yellow(LOGO_ART) + "\n");
-  process.stdout.write("\n");
-  process.stdout.write(
-    `  ${chalk.green("\u2713")}  Setup complete! Starting your first update\u2026\n`
-  );
-  process.stdout.write("\n");
+  const confirmationLines = [
+    chalk.yellow(LOGO_ART),
+    "",
+    `  ${chalk.green("\u2713")}  Setup complete! Starting your first update\u2026`,
+    "",
+  ];
+  render(confirmationLines.join("\n") + "\n");
 
-  // Small pause so the confirmation is readable before the update screen takes over
-  await new Promise((res) => setTimeout(res, 800));
+  await new Promise((resolve) => setTimeout(resolve, 800));
 }

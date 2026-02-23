@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { parse, stringify } from "smol-toml";
 
-/** Steps that cannot be disabled — brew is a hard runtime dependency. */
 export const PROTECTED_STEP_IDS = new Set(["homebrew"]);
 
 export type BraeburnConfig = {
@@ -13,9 +12,11 @@ export type BraeburnConfig = {
 
 const EMPTY_CONFIG: BraeburnConfig = { steps: {} };
 
-async function pathExists(p: string): Promise<boolean> {
+const LOGO_SETTING_ID = "logo";
+
+async function pathExists(targetPath: string): Promise<boolean> {
   try {
-    await access(p);
+    await access(targetPath);
     return true;
   } catch {
     return false;
@@ -52,13 +53,36 @@ export async function writeConfig(config: BraeburnConfig): Promise<void> {
   await writeFile(configPath, stringify(config as Record<string, unknown>), "utf-8");
 }
 
+export function isSettingEnabled(config: BraeburnConfig, settingId: string): boolean {
+  if (PROTECTED_STEP_IDS.has(settingId)) return true;
+  if (settingId === LOGO_SETTING_ID) return config.logo !== false;
+  return config.steps[settingId] !== false;
+}
+
 export function isStepEnabled(config: BraeburnConfig, stepId: string): boolean {
-  if (PROTECTED_STEP_IDS.has(stepId)) return true;
-  // Absent from config means enabled (opt-out model)
-  return config.steps[stepId] !== false;
+  return isSettingEnabled(config, stepId);
 }
 
 export function isLogoEnabled(config: BraeburnConfig): boolean {
-  // Absent from config means enabled (opt-out model)
-  return config.logo !== false;
+  return isSettingEnabled(config, LOGO_SETTING_ID);
+}
+
+export function applySettingToConfig(config: BraeburnConfig, settingId: string, desiredState: "enable" | "disable"): BraeburnConfig {
+  const updatedConfig = structuredClone(config);
+
+  if (settingId === LOGO_SETTING_ID) {
+    if (desiredState === "enable") {
+      delete updatedConfig.logo;
+    } else {
+      updatedConfig.logo = false;
+    }
+    return updatedConfig;
+  }
+
+  if (desiredState === "enable") {
+    delete updatedConfig.steps[settingId];
+  } else {
+    updatedConfig.steps[settingId] = false;
+  }
+  return updatedConfig;
 }

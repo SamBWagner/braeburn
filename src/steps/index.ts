@@ -14,6 +14,7 @@ export type Step = {
   id: string;
   name: string;
   description: string;
+  warning?: string;
   brewPackageToInstall?: string;
   checkIsAvailable: () => Promise<boolean>;
   run: (context: StepRunContext) => Promise<void>;
