@@ -11,6 +11,7 @@ const NVM_SOURCE_PREFIX = `export NVM_DIR="${NVM_DIRECTORY}" && source "$NVM_DIR
 const nvmStep: Step = {
   id: "nvm",
   name: "Node.js (nvm)",
+  stage: "runtime",
   description:
     "Install the latest Node.js via nvm, migrating packages from the current version",
 

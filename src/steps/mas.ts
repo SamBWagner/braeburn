@@ -3,6 +3,7 @@ import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 const masStep: Step = {
   id: "mas",
   name: "Mac App Store",
+  stage: "tools",
   description: "Upgrade all Mac App Store apps via the mas CLI tool",
   brewPackageToInstall: "mas",
 

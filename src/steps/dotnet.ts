@@ -3,6 +3,7 @@ import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 const dotnetStep: Step = {
   id: "dotnet",
   name: ".NET",
+  stage: "tools",
   description: "Update all globally installed .NET tools",
 
   async checkIsAvailable(): Promise<boolean> {

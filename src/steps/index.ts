@@ -13,10 +13,13 @@ export type StepRunContext = {
   captureOutput: (options: { shellCommand: string }) => Promise<string>;
 };
 
+export type StepStage = "runtime" | "tools";
+
 export type Step = {
   id: string;
   name: string;
   description: string;
+  stage: StepStage;
   warning?: string;
   brewPackageToInstall?: string;
   checkIsAvailable: () => Promise<boolean>;

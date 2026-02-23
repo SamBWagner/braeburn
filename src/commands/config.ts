@@ -8,6 +8,7 @@ import {
   isLogoEnabled,
   applySettingToConfig,
   PROTECTED_STEP_IDS,
+  DEFAULT_OFF_STEP_IDS,
   type BraeburnConfig,
 } from "../config.js";
 import type { Step } from "../steps/index.js";
@@ -136,9 +137,11 @@ export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOpti
 
 async function writeCleanConfig(config: BraeburnConfig): Promise<void> {
   const cleaned: BraeburnConfig = { steps: {} };
-  for (const [stepId, enabled] of Object.entries(config.steps)) {
-    if (enabled === false) {
+  for (const [stepId, value] of Object.entries(config.steps)) {
+    if (value === false && !DEFAULT_OFF_STEP_IDS.has(stepId)) {
       cleaned.steps[stepId] = false;
+    } else if (value === true && DEFAULT_OFF_STEP_IDS.has(stepId)) {
+      cleaned.steps[stepId] = true;
     }
   }
   if (config.logo === false) {

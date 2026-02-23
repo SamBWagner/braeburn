@@ -81,15 +81,35 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
 
   const phases = deriveAllStepPhases(steps, currentStepIndex, currentPhase, completedStepRecords);
 
+  const hasRuntimeSteps = steps.some((step) => step.stage === "runtime");
+  const hasToolsSteps = steps.some((step) => step.stage === "tools");
+  const showStageLabels = hasRuntimeSteps && hasToolsSteps;
+
+  const stepLines: string[] = [];
+  for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+    const step = steps[stepIndex];
+
+    if (showStageLabels) {
+      const isFirstRuntime = step.stage === "runtime" && (stepIndex === 0 || steps[stepIndex - 1].stage !== "runtime");
+      const isFirstTools = step.stage === "tools" && (stepIndex === 0 || steps[stepIndex - 1].stage !== "tools");
+
+      if (isFirstRuntime) {
+        stepLines.push(chalk.dim("Runtimes"));
+      } else if (isFirstTools) {
+        stepLines.push(chalk.dim("Tools"));
+      }
+    }
+
+    const icon = stepTrackerIcon(phases[stepIndex]);
+    const name = isActivePhase(phases[stepIndex]) ? chalk.white(step.name) : chalk.dim(step.name);
+    stepLines.push(`${icon}${name}`);
+  }
+
   const rightColumnLines: string[] = [
     `${chalk.bold.white("braeburn")} ${chalk.dim("v" + version)}`,
     chalk.dim("macOS system updater"),
     "",
-    ...steps.map((step, index) => {
-      const icon = stepTrackerIcon(phases[index]);
-      const name = isActivePhase(phases[index]) ? chalk.white(step.name) : chalk.dim(step.name);
-      return `${icon}${name}`;
-    }),
+    ...stepLines,
   ];
 
   if (logoVisibility === "hidden") {

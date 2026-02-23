@@ -3,6 +3,7 @@ import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 const cleanupStep: Step = {
   id: "cleanup",
   name: "Cleanup",
+  stage: "tools",
   description: "Remove outdated Homebrew downloads and cached versions",
 
   async checkIsAvailable(): Promise<boolean> {

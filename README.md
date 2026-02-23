@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/braeburn)](https://www.npmjs.com/package/braeburn)
 
-A macOS system updater CLI. Runs update steps for Homebrew, Mac App Store, Oh My Zsh, npm, pip, pyenv, nvm, .NET, and macOS itself.
+A macOS system updater CLI. Keeps tools installed via Homebrew, npm, pip, .NET, and others up to date.
 
 ## Install
 
@@ -30,7 +30,20 @@ braeburn homebrew npm # run specific steps only
 
 ## Steps
 
-`homebrew` `mas` `ohmyzsh` `npm` `pip` `pyenv` `nvm` `dotnet` `macos` `cleanup`
+Steps run in two stages. The runtime stage runs first and is **off by default** — upgrading a runtime is a larger change than upgrading a tool, and is best done intentionally.
+
+| Step | Stage | Default | Requires |
+|---|---|---|---|
+| `pyenv` | runtime | off | `pyenv` or Homebrew |
+| `nvm` | runtime | off | `~/.nvm` |
+| `homebrew` | tools | on | `brew` (required) |
+| `mas` | tools | on | `mas` |
+| `ohmyzsh` | tools | on | `~/.oh-my-zsh` |
+| `npm` | tools | on | `npm` |
+| `pip` | tools | on | `pip3` |
+| `dotnet` | tools | on | `dotnet` |
+| `macos` | tools | on | — |
+| `cleanup` | tools | on | `brew` |
 
 ## Requirements
 

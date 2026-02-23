@@ -23,13 +23,13 @@ import { runSetupCommand } from "./commands/setup.js";
 import { readConfig, isStepEnabled, isLogoEnabled, PROTECTED_STEP_IDS, configFileExists } from "./config.js";
 
 const ALL_STEPS: Step[] = [
+  pyenvStep,
+  nvmStep,
   homebrewStep,
   masStep,
   ohmyzshStep,
   npmStep,
   pipStep,
-  pyenvStep,
-  nvmStep,
   dotnetStep,
   macosStep,
   cleanupStep,
@@ -67,23 +67,27 @@ program
     "after",
     `
 Step descriptions:
+  Runtime stage (default: off — update the version managers and runtimes themselves):
+  pyenv      Upgrade pyenv, install latest Python 3.x  (requires: pyenv or brew)
+  nvm        Install latest Node.js via nvm             (requires: ~/.nvm)
+
+  Tools stage (default: on — update packages installed via the managers above):
   homebrew   Update Homebrew itself and all installed formulae
   mas        Upgrade Mac App Store apps  (requires: mas)
   ohmyzsh    Update Oh My Zsh            (requires: ~/.oh-my-zsh)
   npm        Update global npm packages  (requires: npm)
   pip        Update global pip3 packages (requires: pip3) ⚠ may be fragile
-  pyenv      Upgrade pyenv, install latest Python 3.x (requires: pyenv or brew)
-  nvm        Update Node.js via nvm      (requires: ~/.nvm)
   dotnet     Update .NET global tools    (requires: dotnet)
   macos      Check for macOS updates, prompt to install
   cleanup    Clean up Homebrew cache and old downloads
 
 Examples:
-  braeburn                  Run all steps interactively
-  braeburn -y               Run all steps, auto-accept everything
+  braeburn                  Run all enabled steps interactively
+  braeburn -y               Run all enabled steps, auto-accept everything
   braeburn -fy              Same as above
   braeburn homebrew npm     Run only the homebrew and npm steps
   braeburn homebrew -y      Run only homebrew, auto-accept
+  braeburn nvm pyenv        Run only the runtime-stage steps
   `
   )
   .action(

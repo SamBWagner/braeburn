@@ -12,6 +12,7 @@ const OH_MY_ZSH_UPGRADE_SCRIPT_PATH = join(
 const ohmyzshStep: Step = {
   id: "ohmyzsh",
   name: "Oh My Zsh",
+  stage: "tools",
   description: "Update Oh My Zsh to the latest version",
 
   async checkIsAvailable(): Promise<boolean> {

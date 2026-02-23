@@ -6,6 +6,7 @@ import {
 const macosStep: Step = {
   id: "macos",
   name: "macOS",
+  stage: "tools",
   description: "Check for and optionally install macOS system software updates",
 
   async checkIsAvailable(): Promise<boolean> {

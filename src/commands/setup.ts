@@ -47,9 +47,24 @@ export function buildSetupScreen(items: SelectableStep[], cursorIndex: number): 
     "",
   ];
 
+  const hasRuntimeItems = items.some((item) => item.step.stage === "runtime");
+  const hasToolsItems = items.some((item) => item.step.stage === "tools");
+  const showStageLabels = hasRuntimeItems && hasToolsItems;
+
   for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
     const item = items[itemIndex];
     const isCursor = itemIndex === cursorIndex;
+
+    if (showStageLabels) {
+      const isFirstRuntime = item.step.stage === "runtime" && (itemIndex === 0 || items[itemIndex - 1].step.stage !== "runtime");
+      const isFirstTools = item.step.stage === "tools" && (itemIndex === 0 || items[itemIndex - 1].step.stage !== "tools");
+
+      if (isFirstRuntime) {
+        lines.push(`  ${chalk.dim("── Runtimes ─────────────────────────────────────────────────────────")}`);
+      } else if (isFirstTools) {
+        lines.push(`  ${chalk.dim("── Tools ────────────────────────────────────────────────────────────")}`);
+      }
+    }
 
     const cursor = isCursor ? chalk.cyan("\u203a") : " ";
     const checkbox = item.selection === "selected" ? chalk.green("\u25cf") : chalk.dim("\u25cb");
@@ -96,7 +111,7 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
 
   const items: SelectableStep[] = allSteps.map((step, stepIndex) => ({
     step,
-    selection: "selected",
+    selection: PROTECTED_STEP_IDS.has(step.id) || step.stage === "tools" ? "selected" : "deselected",
     protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
     availability: availabilityResults[stepIndex] ? "available" : "unavailable",
   }));

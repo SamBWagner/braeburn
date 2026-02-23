@@ -3,6 +3,7 @@ import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
 const npmStep: Step = {
   id: "npm",
   name: "npm",
+  stage: "tools",
   description: "Update all globally installed npm packages",
 
   async checkIsAvailable(): Promise<boolean> {

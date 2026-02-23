@@ -15,6 +15,7 @@ function makeStep(overrides: Partial<Step> = {}): Step {
     id: "test",
     name: "Test",
     description: "A test step",
+    stage: "tools",
     checkIsAvailable: async () => true,
     run: async () => {},
     ...overrides,
@@ -240,5 +241,47 @@ describe("buildHeaderLines", () => {
     });
     expect(withoutLogo.length).toBe(5);
     expect(withLogo.length).toBe(12);
+  });
+
+  it("inserts stage labels when both runtime and tools steps are present", () => {
+    const mixedSteps = [
+      makeStep({ id: "nvm", name: "Node.js (nvm)", stage: "runtime" }),
+      makeStep({ id: "brew", name: "Homebrew", stage: "tools" }),
+      makeStep({ id: "npm", name: "npm", stage: "tools" }),
+    ];
+
+    const lines = buildHeaderLines({
+      steps: mixedSteps,
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      currentStepIndex: 0,
+      currentPhase: "pending",
+      completedStepRecords: [],
+    });
+
+    expect(lines.map(stripAnsi)).toEqual([
+      "braeburn v1.0.0",
+      "macOS system updater",
+      "",
+      "Runtimes",
+      "· Node.js (nvm)",
+      "Tools",
+      "· Homebrew",
+      "· npm",
+    ]);
+  });
+
+  it("omits stage labels when all steps are the same stage", () => {
+    const lines = buildHeaderLines({
+      steps,
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      currentStepIndex: 0,
+      currentPhase: "pending",
+      completedStepRecords: [],
+    });
+    const stripped = lines.map(stripAnsi);
+    expect(stripped).not.toContain("Tools");
+    expect(stripped).not.toContain("Runtimes");
   });
 });

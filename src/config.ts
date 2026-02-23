@@ -5,6 +5,8 @@ import { parse, stringify } from "smol-toml";
 
 export const PROTECTED_STEP_IDS = new Set(["homebrew"]);
 
+export const DEFAULT_OFF_STEP_IDS = new Set(["nvm", "pyenv"]);
+
 export type BraeburnConfig = {
   steps: Record<string, boolean>;
   logo?: boolean;
@@ -56,6 +58,7 @@ export async function writeConfig(config: BraeburnConfig): Promise<void> {
 export function isSettingEnabled(config: BraeburnConfig, settingId: string): boolean {
   if (PROTECTED_STEP_IDS.has(settingId)) return true;
   if (settingId === LOGO_SETTING_ID) return config.logo !== false;
+  if (DEFAULT_OFF_STEP_IDS.has(settingId)) return config.steps[settingId] === true;
   return config.steps[settingId] !== false;
 }
 
@@ -75,6 +78,15 @@ export function applySettingToConfig(config: BraeburnConfig, settingId: string, 
       delete updatedConfig.logo;
     } else {
       updatedConfig.logo = false;
+    }
+    return updatedConfig;
+  }
+
+  if (DEFAULT_OFF_STEP_IDS.has(settingId)) {
+    if (desiredState === "enable") {
+      updatedConfig.steps[settingId] = true;
+    } else {
+      delete updatedConfig.steps[settingId];
     }
     return updatedConfig;
   }

@@ -9,6 +9,7 @@ function makeStep(overrides: Partial<Step> = {}): Step {
     id: "test",
     name: "Test Step",
     description: "A step for testing",
+    stage: "tools",
     checkIsAvailable: async () => true,
     run: async () => {},
     ...overrides,
