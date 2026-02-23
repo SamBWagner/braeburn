@@ -20,7 +20,7 @@ import { runUpdateCommand } from "./commands/update.js";
 import { runLogCommand, runLogListCommand } from "./commands/log.js";
 import { runConfigCommand, runConfigUpdateCommand } from "./commands/config.js";
 import { runSetupCommand } from "./commands/setup.js";
-import { readConfig, isStepEnabled, PROTECTED_STEP_IDS, configFileExists } from "./config.js";
+import { readConfig, isStepEnabled, isLogoEnabled, PROTECTED_STEP_IDS, configFileExists } from "./config.js";
 
 const ALL_STEPS: Step[] = [
   homebrewStep,
@@ -62,6 +62,7 @@ program
   )
   .option("-y, --yes", "Auto-accept all prompts (default yes to everything)")
   .option("-f, --force", "Alias for --yes")
+  .option("--no-logo", "Hide the logo")
   .addHelpText(
     "after",
     `
@@ -86,13 +87,15 @@ Examples:
   `
   )
   .action(
-    async (stepArguments: string[], options: { yes?: boolean; force?: boolean }) => {
+    async (stepArguments: string[], options: { yes?: boolean; force?: boolean; logo?: boolean }) => {
       const autoYes = options.yes === true || options.force === true;
 
       // First-run: if no config file exists yet, show the setup wizard.
       if (!(await configFileExists())) {
         await runSetupCommand(ALL_STEPS);
       }
+
+      const config = await readConfig();
 
       let stepsToRun =
         stepArguments.length === 0
@@ -102,13 +105,16 @@ Examples:
       // When no explicit steps are requested, filter out steps disabled in config.
       // Explicit step arguments always bypass config (user knows what they want).
       if (stepArguments.length === 0) {
-        const config = await readConfig();
         stepsToRun = stepsToRun.filter((step) => isStepEnabled(config, step.id));
       }
+
+      // CLI --no-logo overrides config; otherwise defer to config preference.
+      const showLogo = options.logo !== false && isLogoEnabled(config);
 
       await runUpdateCommand({
         steps: stepsToRun,
         autoYes,
+        showLogo,
         version: BRAEBURN_VERSION,
       });
     }
@@ -174,11 +180,15 @@ const configUpdateCommand = configCommand
     "after",
     `
 Examples:
+  braeburn config update --no-logo           Hide the logo
   braeburn config update --no-ohmyzsh        Disable Oh My Zsh updates
   braeburn config update --no-pip --no-nvm   Disable pip and nvm updates
   braeburn config update --ohmyzsh           Re-enable Oh My Zsh updates
     `
   );
+
+configUpdateCommand.option(`--no-logo`, `Hide the logo`);
+configUpdateCommand.option(`--logo`, `Show the logo`);
 
 for (const step of configurableSteps) {
   configUpdateCommand.option(`--no-${step.id}`, `Disable ${step.name} updates`);
@@ -197,7 +207,12 @@ configUpdateCommand.action(function () {
     }
   }
 
-  runConfigUpdateCommand({ stepUpdates, allSteps: ALL_STEPS });
+  const logoSource = configUpdateCommand.getOptionValueSource("logo");
+  const logoUpdate = logoSource === "cli"
+    ? (configUpdateCommand.opts().logo as boolean)
+    : undefined;
+
+  runConfigUpdateCommand({ stepUpdates, logoUpdate, allSteps: ALL_STEPS });
 });
 
 function resolveStepsByIds(stepIds: string[]): Step[] {

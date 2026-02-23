@@ -31,6 +31,7 @@ export type ResolvedVersion = {
 export type AppState = {
   steps: Step[];
   version: string;
+  showLogo: boolean;
   currentStepIndex: number;
   currentPhase: StepPhase;
   completedStepRecords: CompletedStepRecord[];
@@ -40,10 +41,11 @@ export type AppState = {
   versionReport: ResolvedVersion[] | undefined;
 };
 
-export function createInitialAppState(steps: Step[], version: string): AppState {
+export function createInitialAppState(steps: Step[], version: string, showLogo: boolean): AppState {
   return {
     steps,
     version,
+    showLogo,
     currentStepIndex: 0,
     currentPhase: "checking-availability",
     completedStepRecords: [],

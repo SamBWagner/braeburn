@@ -4,6 +4,7 @@ import {
   writeConfig,
   resolveConfigPath,
   isStepEnabled,
+  isLogoEnabled,
   PROTECTED_STEP_IDS,
   type BraeburnConfig,
 } from "../config.js";
@@ -15,6 +16,7 @@ type RunConfigCommandOptions = {
 
 type RunConfigUpdateCommandOptions = {
   stepUpdates: Record<string, boolean>;
+  logoUpdate: boolean | undefined;
   allSteps: Step[];
 };
 
@@ -28,6 +30,10 @@ export async function runConfigCommand(options: RunConfigCommandOptions): Promis
 
   process.stdout.write(`Config: ${chalk.dim(configPath)}\n\n`);
   process.stdout.write(`${"Step".padEnd(STEP_COL)}Status\n`);
+  process.stdout.write(`${DIVIDER}\n`);
+
+  const logoEnabled = isLogoEnabled(config);
+  process.stdout.write(`${"logo".padEnd(STEP_COL)}${logoEnabled ? chalk.green("enabled") : chalk.red("disabled")}\n`);
   process.stdout.write(`${DIVIDER}\n`);
 
   for (const step of allSteps) {
@@ -50,14 +56,21 @@ export async function runConfigCommand(options: RunConfigCommandOptions): Promis
 }
 
 export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOptions): Promise<void> {
-  const { stepUpdates, allSteps } = options;
+  const { stepUpdates, logoUpdate, allSteps } = options;
 
-  if (Object.keys(stepUpdates).length === 0) {
+  if (Object.keys(stepUpdates).length === 0 && logoUpdate === undefined) {
     const configurableSteps = allSteps.filter((s) => !PROTECTED_STEP_IDS.has(s.id));
 
     process.stdout.write(
       "No changes — pass flags to enable or disable steps:\n\n"
     );
+    process.stdout.write(
+      `  ${"--no-logo".padEnd(18)} hide the logo\n`
+    );
+    process.stdout.write(
+      `  ${"--logo".padEnd(18)} show the logo\n`
+    );
+    process.stdout.write("\n");
     for (const step of configurableSteps) {
       process.stdout.write(
         `  ${`--no-${step.id}`.padEnd(18)} disable ${step.name}\n`
@@ -74,12 +87,24 @@ export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOpti
   }
 
   const config = await readConfig();
-  const changes: Array<{ stepId: string; from: boolean; to: boolean }> = [];
+  const changes: Array<{ label: string; from: boolean; to: boolean }> = [];
+
+  if (logoUpdate !== undefined) {
+    const currentlyEnabled = isLogoEnabled(config);
+    if (currentlyEnabled !== logoUpdate) {
+      changes.push({ label: "logo", from: currentlyEnabled, to: logoUpdate });
+    }
+    if (logoUpdate) {
+      delete config.logo;
+    } else {
+      config.logo = false;
+    }
+  }
 
   for (const [stepId, newEnabled] of Object.entries(stepUpdates)) {
     const currentlyEnabled = isStepEnabled(config, stepId);
     if (currentlyEnabled !== newEnabled) {
-      changes.push({ stepId, from: currentlyEnabled, to: newEnabled });
+      changes.push({ label: stepId, from: currentlyEnabled, to: newEnabled });
     }
     if (newEnabled) {
       // Re-enabling: remove from config so absent = enabled (keeps file minimal)
@@ -97,10 +122,10 @@ export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOpti
     return;
   }
 
-  for (const { stepId, from, to } of changes) {
+  for (const { label, from, to } of changes) {
     const fromLabel = from ? chalk.green("enabled") : chalk.red("disabled");
     const toLabel = to ? chalk.green("enabled") : chalk.red("disabled");
-    process.stdout.write(`  ${stepId.padEnd(12)} ${fromLabel} → ${toLabel}\n`);
+    process.stdout.write(`  ${label.padEnd(12)} ${fromLabel} → ${toLabel}\n`);
   }
 
   const configPath = await resolveConfigPath();
@@ -113,6 +138,9 @@ async function writeCleanConfig(config: BraeburnConfig): Promise<void> {
     if (enabled === false) {
       cleaned.steps[stepId] = false;
     }
+  }
+  if (config.logo === false) {
+    cleaned.logo = false;
   }
   await writeConfig(cleaned);
 }

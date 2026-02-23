@@ -22,6 +22,7 @@ export function buildScreen(state: AppState): string {
     ...buildHeaderLines({
       steps: state.steps,
       version: state.version,
+      showLogo: state.showLogo,
       currentStepIndex: state.currentStepIndex,
       currentPhase: state.currentPhase,
       completedStepRecords: state.completedStepRecords,

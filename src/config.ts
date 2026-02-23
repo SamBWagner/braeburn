@@ -8,6 +8,7 @@ export const PROTECTED_STEP_IDS = new Set(["homebrew"]);
 
 export type BraeburnConfig = {
   steps: Record<string, boolean>;
+  logo?: boolean;
 };
 
 const EMPTY_CONFIG: BraeburnConfig = { steps: {} };
@@ -39,7 +40,7 @@ export async function readConfig(): Promise<BraeburnConfig> {
   try {
     const raw = await readFile(configPath, "utf-8");
     const parsed = parse(raw) as Partial<BraeburnConfig>;
-    return { steps: parsed.steps ?? {} };
+    return { steps: parsed.steps ?? {}, logo: parsed.logo };
   } catch {
     return structuredClone(EMPTY_CONFIG);
   }
@@ -55,4 +56,9 @@ export function isStepEnabled(config: BraeburnConfig, stepId: string): boolean {
   if (PROTECTED_STEP_IDS.has(stepId)) return true;
   // Absent from config means enabled (opt-out model)
   return config.steps[stepId] !== false;
+}
+
+export function isLogoEnabled(config: BraeburnConfig): boolean {
+  // Absent from config means enabled (opt-out model)
+  return config.logo !== false;
 }

@@ -9,13 +9,14 @@ import type { Step } from "../steps/index.js";
 type RunUpdateCommandOptions = {
   steps: Step[];
   autoYes: boolean;
+  showLogo: boolean;
   version: string;
 };
 
 export async function runUpdateCommand(options: RunUpdateCommandOptions): Promise<void> {
   const { steps, version } = options;
   let autoYes = options.autoYes;
-  const state = createInitialAppState(steps, version);
+  const state = createInitialAppState(steps, version, options.showLogo);
 
   process.stdout.write("\x1b[?25l");
   process.on("exit", () => process.stdout.write("\x1b[?25h"));

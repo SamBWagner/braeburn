@@ -47,17 +47,16 @@ function deriveAllStepPhases(
 type BuildHeaderOptions = {
   steps: Step[];
   version: string;
+  showLogo: boolean;
   currentStepIndex: number;
   currentPhase: StepPhase;
   completedStepRecords: CompletedStepRecord[];
 };
 
 export function buildHeaderLines(options: BuildHeaderOptions): string[] {
-  const { steps, version, currentStepIndex, currentPhase, completedStepRecords } = options;
+  const { steps, version, showLogo, currentStepIndex, currentPhase, completedStepRecords } = options;
 
   const phases = deriveAllStepPhases(steps, currentStepIndex, currentPhase, completedStepRecords);
-
-  const logoLines = LOGO_ART.split("\n");
 
   const rightColumnLines: string[] = [
     `${chalk.bold.white("braeburn")} ${chalk.dim("v" + version)}`,
@@ -70,6 +69,11 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
     }),
   ];
 
+  if (!showLogo) {
+    return rightColumnLines;
+  }
+
+  const logoLines = LOGO_ART.split("\n");
   const totalLines = Math.max(logoLines.length, rightColumnLines.length);
   const result: string[] = [];
 
