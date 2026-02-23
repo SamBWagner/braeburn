@@ -29,6 +29,11 @@ export async function resolveConfigPath(): Promise<string> {
   return join(homedir(), ".braeburn", "config");
 }
 
+export async function configFileExists(): Promise<boolean> {
+  const configPath = await resolveConfigPath();
+  return pathExists(configPath);
+}
+
 export async function readConfig(): Promise<BraeburnConfig> {
   const configPath = await resolveConfigPath();
   try {

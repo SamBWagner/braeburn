@@ -19,7 +19,8 @@ import {
 import { runUpdateCommand } from "./commands/update.js";
 import { runLogCommand, runLogListCommand } from "./commands/log.js";
 import { runConfigCommand, runConfigUpdateCommand } from "./commands/config.js";
-import { readConfig, isStepEnabled, PROTECTED_STEP_IDS } from "./config.js";
+import { runSetupCommand } from "./commands/setup.js";
+import { readConfig, isStepEnabled, PROTECTED_STEP_IDS, configFileExists } from "./config.js";
 
 const ALL_STEPS: Step[] = [
   homebrewStep,
@@ -87,6 +88,11 @@ Examples:
   .action(
     async (stepArguments: string[], options: { yes?: boolean; force?: boolean }) => {
       const autoYes = options.yes === true || options.force === true;
+
+      // First-run: if no config file exists yet, show the setup wizard.
+      if (!(await configFileExists())) {
+        await runSetupCommand(ALL_STEPS);
+      }
 
       let stepsToRun =
         stepArguments.length === 0
