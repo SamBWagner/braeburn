@@ -10,22 +10,23 @@
     "dist"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "scripts": {
     "build": "tsc",
+    "postbuild": "chmod +x dist/index.js",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "chalk": "^5.3.0",
-    "commander": "^12.1.0",
+    "commander": "^14.0.0",
     "execa": "^9.3.0",
     "smol-toml": "^1.6.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.0.0",
     "tsx": "^4.7.0",
     "typescript": "^5.5.0"
   }
