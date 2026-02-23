@@ -5,6 +5,25 @@ import type { StepPhase, CompletedStepRecord } from "./state.js";
 
 const LOGO_COLUMN_WIDTH = 32;
 const LOGO_SEPARATOR = "    ";
+const MIN_SIDE_BY_SIDE_COLS = LOGO_COLUMN_WIDTH + LOGO_SEPARATOR.length + 20; // 56
+
+type LogoLayout = "side-by-side" | "stacked" | "none";
+
+function determineLogoLayout(logoLines: string[]): LogoLayout {
+  const cols = process.stdout.columns ?? 80;
+  const rows = process.stdout.rows ?? 24;
+
+  if (cols >= MIN_SIDE_BY_SIDE_COLS) {
+    return "side-by-side";
+  }
+
+  // Not wide enough for side-by-side — stack if there are enough rows.
+  if (rows >= logoLines.length + 6) {
+    return "stacked";
+  }
+
+  return "none";
+}
 
 function stepTrackerIcon(phase: StepPhase): string {
   if (phase === "complete")                              return chalk.green("✓ ");
@@ -74,6 +93,21 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
   }
 
   const logoLines = LOGO_ART.split("\n");
+  const layout = determineLogoLayout(logoLines);
+
+  if (layout === "none") {
+    return rightColumnLines;
+  }
+
+  if (layout === "stacked") {
+    return [
+      ...logoLines.map((line) => chalk.yellow(line)),
+      "",
+      ...rightColumnLines,
+    ];
+  }
+
+  // side-by-side
   const totalLines = Math.max(logoLines.length, rightColumnLines.length);
   const result: string[] = [];
 
