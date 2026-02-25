@@ -1,6 +1,6 @@
 {
   "name": "braeburn",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "macOS system updater CLI",
   "type": "module",
   "bin": {
