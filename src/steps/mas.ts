@@ -4,7 +4,7 @@ import type { Step, StepRunContext } from "./types.js";
 const masStep: Step = {
   id: "mas",
   name: "Mac App Store",
-  stage: "tools",
+  categoryId: "apps-packages",
   description: "Upgrade all Mac App Store apps via the mas CLI tool",
   brewPackageToInstall: "mas",
 

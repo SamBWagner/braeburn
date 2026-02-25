@@ -1,11 +1,20 @@
 import readline from "node:readline";
 import chalk from "chalk";
-import { writeConfig, PROTECTED_STEP_IDS } from "../config.js";
+import {
+  writeConfig,
+  PROTECTED_STEP_IDS,
+  CONSERVATIVE_DEFAULT_ON_STEP_IDS,
+  cleanConfigForWrite,
+  type BraeburnConfig,
+} from "../config.js";
 import { LOGO_ART } from "../logo.js";
 import { createScreenRenderer } from "../ui/screen.js";
 import { hideCursorDuringExecution } from "../ui/terminal.js";
-import type { Step } from "../steps/index.js";
-import type { StepStage } from "../update/state.js";
+import {
+  type Step,
+  type StepCategoryId,
+  getStepCategoryLabel,
+} from "../steps/index.js";
 
 export type SelectionState = "selected" | "deselected";
 export type ProtectionStatus = "protected" | "configurable";
@@ -15,7 +24,7 @@ export type SetupStepView = {
   id: string;
   name: string;
   description: string;
-  stage: StepStage;
+  categoryId: StepCategoryId;
   brewPackageToInstall?: string;
 };
 
@@ -57,23 +66,14 @@ export function buildSetupScreen(items: SelectableStep[], cursorIndex: number): 
     "",
   ];
 
-  const hasRuntimeItems = items.some((item) => item.step.stage === "runtime");
-  const hasToolsItems = items.some((item) => item.step.stage === "tools");
-  const showStageLabels = hasRuntimeItems && hasToolsItems;
-
   for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
     const item = items[itemIndex];
     const isCursor = itemIndex === cursorIndex;
 
-    if (showStageLabels) {
-      const isFirstRuntime = item.step.stage === "runtime" && (itemIndex === 0 || items[itemIndex - 1].step.stage !== "runtime");
-      const isFirstTools = item.step.stage === "tools" && (itemIndex === 0 || items[itemIndex - 1].step.stage !== "tools");
-
-      if (isFirstRuntime) {
-        lines.push(`  ${chalk.dim("── Runtimes ─────────────────────────────────────────────────────────")}`);
-      } else if (isFirstTools) {
-        lines.push(`  ${chalk.dim("── Tools ────────────────────────────────────────────────────────────")}`);
-      }
+    const previousItem = items[itemIndex - 1];
+    if (!previousItem || previousItem.step.categoryId !== item.step.categoryId) {
+      const categoryLabel = getStepCategoryLabel(item.step.categoryId);
+      lines.push(`  ${chalk.dim(`── System / ${categoryLabel} ──────────────────────────────────────────`)}`);
     }
 
     const cursor = isCursor ? chalk.cyan("\u203a") : " ";
@@ -124,10 +124,13 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
         id: step.id,
         name: step.name,
         description: step.description,
-        stage: step.stage,
+        categoryId: step.categoryId,
         brewPackageToInstall: step.brewPackageToInstall,
       },
-      selection: PROTECTED_STEP_IDS.has(step.id) || step.stage === "tools" ? "selected" : "deselected",
+      selection:
+        PROTECTED_STEP_IDS.has(step.id) || CONSERVATIVE_DEFAULT_ON_STEP_IDS.has(step.id)
+          ? "selected"
+          : "deselected",
       protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
       availability: availabilityResults[stepIndex] ? "available" : "unavailable",
     }));
@@ -169,13 +172,17 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
       process.stdin.resume();
     });
 
-    const stepsConfig: Record<string, boolean> = {};
+    const draftConfig: BraeburnConfig = {
+      defaultsProfile: "conservative-v2",
+      steps: {},
+    };
     for (const item of items) {
-      if (item.protection === "configurable" && item.selection === "deselected") {
-        stepsConfig[item.step.id] = false;
+      if (item.protection === "protected") {
+        continue;
       }
+      draftConfig.steps[item.step.id] = item.selection === "selected";
     }
-    await writeConfig({ steps: stepsConfig });
+    await writeConfig(cleanConfigForWrite(draftConfig));
 
     const confirmationLines = [
       chalk.yellow(LOGO_ART),

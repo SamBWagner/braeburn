@@ -1,5 +1,4 @@
 export {
-  type StepStage,
   type DisplayStep,
   type StepPhase,
   type CompletedStepRecord,

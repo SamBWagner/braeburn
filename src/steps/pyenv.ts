@@ -9,7 +9,7 @@ const FIND_LATEST_STABLE_PYTHON_SHELL_COMMAND =
 const pyenvStep: Step = {
   id: "pyenv",
   name: "pyenv",
-  stage: "runtime",
+  categoryId: "runtimes",
   description: "Upgrade pyenv via Homebrew and install the latest Python 3.x",
   brewPackageToInstall: "pyenv",
 

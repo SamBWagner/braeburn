@@ -1,5 +1,6 @@
 import type { OutputLineCallback } from "../runner.js";
 import type { StepLogWriter } from "../logger.js";
+import type { StepCategoryId } from "./categories.js";
 
 export type StepRunContext = {
   onOutputLine: OutputLineCallback;
@@ -8,13 +9,11 @@ export type StepRunContext = {
   captureOutput: (options: { shellCommand: string }) => Promise<string>;
 };
 
-export type StepStage = "runtime" | "tools";
-
 export type Step = {
   id: string;
   name: string;
   description: string;
-  stage: StepStage;
+  categoryId: StepCategoryId;
   warning?: string;
   brewPackageToInstall?: string;
   checkIsAvailable: () => Promise<boolean>;

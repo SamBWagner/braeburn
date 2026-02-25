@@ -24,7 +24,7 @@ async function writeTestConfig(config: BraeburnConfig): Promise<void> {
 async function readTestConfig(): Promise<BraeburnConfig> {
   const raw = await readFile(configPath, "utf-8");
   const parsed = parse(raw) as Partial<BraeburnConfig>;
-  return { steps: parsed.steps ?? {}, logo: parsed.logo };
+  return { steps: parsed.steps ?? {}, logo: parsed.logo, defaultsProfile: parsed.defaultsProfile };
 }
 
 describe("config file round-trips", () => {
@@ -54,11 +54,13 @@ describe("config file round-trips", () => {
     const config: BraeburnConfig = {
       steps: { npm: false },
       logo: false,
+      defaultsProfile: "conservative-v2",
     };
     await writeTestConfig(config);
     const result = await readTestConfig();
     expect(result.steps.npm).toBe(false);
     expect(result.logo).toBe(false);
+    expect(result.defaultsProfile).toBe("conservative-v2");
   });
 
   it("parses a hand-written TOML config", async () => {

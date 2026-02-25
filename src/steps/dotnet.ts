@@ -4,7 +4,7 @@ import type { Step, StepRunContext } from "./types.js";
 const dotnetStep: Step = {
   id: "dotnet",
   name: ".NET",
-  stage: "tools",
+  categoryId: "cli-tools",
   description: "Update all globally installed .NET tools",
 
   async checkIsAvailable(): Promise<boolean> {

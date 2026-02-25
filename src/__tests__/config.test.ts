@@ -45,6 +45,13 @@ describe("isSettingEnabled", () => {
   it("returns true for an unknown step id (absent means enabled)", () => {
     expect(isSettingEnabled(emptyConfig(), "some_unknown_step")).toBe(true);
   });
+
+  it("uses conservative defaults when defaultsProfile is conservative-v2", () => {
+    const conservativeConfig: BraeburnConfig = { steps: {}, defaultsProfile: "conservative-v2" };
+    expect(isSettingEnabled(conservativeConfig, "npm")).toBe(true);
+    expect(isSettingEnabled(conservativeConfig, "ohmyzsh")).toBe(false);
+    expect(isSettingEnabled(conservativeConfig, "macos")).toBe(false);
+  });
 });
 
 describe("isStepEnabled", () => {
@@ -124,5 +131,20 @@ describe("applySettingToConfig", () => {
 
     expect(config.steps).not.toHaveProperty("npm");
     expect(config.steps.pip).toBe(false);
+  });
+
+  it("stores explicit true when enabling a conservative default-off step", () => {
+    const conservativeConfig: BraeburnConfig = { steps: {}, defaultsProfile: "conservative-v2" };
+    const result = applySettingToConfig(conservativeConfig, "ohmyzsh", "enable");
+    expect(result.steps.ohmyzsh).toBe(true);
+  });
+
+  it("drops explicit value when disabling a conservative default-off step", () => {
+    const conservativeConfig: BraeburnConfig = {
+      steps: { ohmyzsh: true },
+      defaultsProfile: "conservative-v2",
+    };
+    const result = applySettingToConfig(conservativeConfig, "ohmyzsh", "disable");
+    expect(result.steps).not.toHaveProperty("ohmyzsh");
   });
 });

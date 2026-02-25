@@ -1,8 +1,21 @@
 export type {
   StepRunContext,
-  StepStage,
   Step,
 } from "./types.js";
+export type {
+  StepCategoryId,
+  StepCategoryDefinition,
+} from "./categories.js";
+export {
+  listStepCategoryDefinitions,
+  getStepCategoryLabel,
+} from "./categories.js";
+export type {
+  CategorySection,
+} from "./grouping.js";
+export {
+  buildCategorySectionsInOrder,
+} from "./grouping.js";
 
 export {
   checkCommandExists,

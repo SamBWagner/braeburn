@@ -8,11 +8,15 @@ import {
   isStepEnabled,
   isLogoEnabled,
   applySettingToConfig,
+  cleanConfigForWrite,
   PROTECTED_STEP_IDS,
-  DEFAULT_OFF_STEP_IDS,
   type BraeburnConfig,
 } from "../config.js";
-import type { Step } from "../steps/index.js";
+import {
+  type Step,
+  buildCategorySectionsInOrder,
+  getStepCategoryLabel,
+} from "../steps/index.js";
 import { createScreenRenderer } from "../ui/screen.js";
 import { hideCursorDuringExecution } from "../ui/terminal.js";
 
@@ -36,6 +40,7 @@ type ConfigViewItem = {
   id: string;
   label: string;
   description: string;
+  sectionLabel: string;
   protection: SettingProtection;
   selection: ConfigSelectionState;
 };
@@ -123,7 +128,7 @@ export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOpti
   const config = await readConfig();
   const { updatedConfig, changes } = applyConfigUpdates(config, settingUpdates);
 
-  await writeCleanConfig(updatedConfig);
+  await writeConfig(cleanConfigForWrite(updatedConfig));
 
   if (changes.length === 0) {
     process.stdout.write("No changes — already set as requested.\n");
@@ -149,58 +154,68 @@ type BuildConfigTableOutputOptions = {
 export function buildConfigTableOutput(options: BuildConfigTableOutputOptions): string {
   const { config, configPath, allSteps } = options;
   const lines: string[] = [];
-  const stepColumnWidth = 12;
-  const divider = "─".repeat(stepColumnWidth + 16);
+  const settingColumnWidth = 24;
 
   lines.push(`Config: ${chalk.dim(configPath)}`);
   lines.push("");
-  lines.push(`${"Step".padEnd(stepColumnWidth)}Status`);
-  lines.push(divider);
+  lines.push(chalk.bold("System"));
+  lines.push(`${"Setting".padEnd(settingColumnWidth)}Status`);
+  lines.push("─".repeat(settingColumnWidth + 16));
 
-  const logoEnabled = isLogoEnabled(config);
-  lines.push(`${"logo".padEnd(stepColumnWidth)}${logoEnabled ? chalk.green("enabled") : chalk.red("disabled")}`);
-  lines.push(divider);
+  for (const section of buildCategorySectionsInOrder(allSteps)) {
+    lines.push(chalk.dim(`  ${getStepCategoryLabel(section.categoryId)}`));
+    for (const step of section.items) {
+      const isProtected = PROTECTED_STEP_IDS.has(step.id);
+      const enabled = isStepEnabled(config, step.id);
 
-  for (const step of allSteps) {
-    const isProtected = PROTECTED_STEP_IDS.has(step.id);
-    const enabled = isStepEnabled(config, step.id);
+      let statusText: string;
+      if (isProtected) {
+        statusText = chalk.dim("always enabled");
+      } else if (enabled) {
+        statusText = chalk.green("enabled");
+      } else {
+        statusText = chalk.red("disabled");
+      }
 
-    let statusText: string;
-    if (isProtected) {
-      statusText = chalk.dim("always enabled");
-    } else if (enabled) {
-      statusText = chalk.green("enabled");
-    } else {
-      statusText = chalk.red("disabled");
+      lines.push(`${step.name.padEnd(settingColumnWidth)}${statusText}`);
     }
-
-    lines.push(`${step.id.padEnd(stepColumnWidth)}${statusText}`);
+    lines.push("");
   }
+
+  lines.push(chalk.bold("Interface"));
+  lines.push(`${"Setting".padEnd(settingColumnWidth)}Status`);
+  lines.push("─".repeat(settingColumnWidth + 16));
+  const logoEnabled = isLogoEnabled(config);
+  lines.push(`${"logo".padEnd(settingColumnWidth)}${logoEnabled ? chalk.green("enabled") : chalk.red("disabled")}`);
 
   lines.push("");
   return lines.join("\n") + "\n";
 }
 
 function buildConfigViewItems(config: BraeburnConfig, allSteps: Step[]): ConfigViewItem[] {
-  const viewItems: ConfigViewItem[] = [
-    {
-      id: "logo",
-      label: "logo",
-      description: "Show the braeburn logo in command output",
-      protection: "configurable",
-      selection: isLogoEnabled(config) ? "enabled" : "disabled",
-    },
-  ];
+  const viewItems: ConfigViewItem[] = [];
 
-  for (const step of allSteps) {
-    viewItems.push({
-      id: step.id,
-      label: step.id,
-      description: step.description,
-      protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
-      selection: isStepEnabled(config, step.id) ? "enabled" : "disabled",
-    });
+  for (const section of buildCategorySectionsInOrder(allSteps)) {
+    for (const step of section.items) {
+      viewItems.push({
+        id: step.id,
+        label: step.name,
+        description: step.description,
+        sectionLabel: `System / ${getStepCategoryLabel(step.categoryId)}`,
+        protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
+        selection: isStepEnabled(config, step.id) ? "enabled" : "disabled",
+      });
+    }
   }
+
+  viewItems.push({
+    id: "logo",
+    label: "logo",
+    description: "Show the braeburn logo in command output",
+    sectionLabel: "Interface",
+    protection: "configurable",
+    selection: isLogoEnabled(config) ? "enabled" : "disabled",
+  });
 
   return viewItems;
 }
@@ -223,9 +238,15 @@ function buildInteractiveConfigScreen(options: BuildInteractiveConfigScreenOptio
   for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
     const item = items[itemIndex];
     const isCursor = itemIndex === cursorIndex;
+
+    const previousItem = items[itemIndex - 1];
+    if (!previousItem || previousItem.sectionLabel !== item.sectionLabel) {
+      lines.push(`  ${chalk.dim(`── ${item.sectionLabel} ──────────────────────────────────────────────`)}`);
+    }
+
     const cursor = isCursor ? chalk.cyan("›") : " ";
     const marker = item.selection === "enabled" ? chalk.green("●") : chalk.dim("○");
-    const label = isCursor ? chalk.bold.white(item.label.padEnd(12)) : chalk.white(item.label.padEnd(12));
+    const label = isCursor ? chalk.bold.white(item.label.padEnd(24)) : chalk.white(item.label.padEnd(24));
 
     let status: string;
     if (item.protection === "protected") {
@@ -337,7 +358,7 @@ async function runInteractiveConfigView(options: RunInteractiveConfigViewOptions
       if (changes.length === 0) {
         completionOutput = "No changes — already set as requested.\n";
       } else {
-        await writeCleanConfig(updatedConfig);
+        await writeConfig(cleanConfigForWrite(updatedConfig));
         const outputLines: string[] = [];
         for (const { label, from, to } of changes) {
           const fromLabel = from === "enable" ? chalk.green("enabled") : chalk.red("disabled");
@@ -354,19 +375,4 @@ async function runInteractiveConfigView(options: RunInteractiveConfigViewOptions
   }
 
   process.stdout.write(completionOutput);
-}
-
-async function writeCleanConfig(config: BraeburnConfig): Promise<void> {
-  const cleaned: BraeburnConfig = { steps: {} };
-  for (const [stepId, value] of Object.entries(config.steps)) {
-    if (value === false && !DEFAULT_OFF_STEP_IDS.has(stepId)) {
-      cleaned.steps[stepId] = false;
-    } else if (value === true && DEFAULT_OFF_STEP_IDS.has(stepId)) {
-      cleaned.steps[stepId] = true;
-    }
-  }
-  if (config.logo === false) {
-    cleaned.logo = false;
-  }
-  await writeConfig(cleaned);
 }

@@ -4,7 +4,7 @@ import type { Step, StepRunContext } from "./types.js";
 const homebrewStep: Step = {
   id: "homebrew",
   name: "Homebrew",
-  stage: "tools",
+  categoryId: "apps-packages",
   description: "Update Homebrew itself and upgrade all installed formulae",
 
   async checkIsAvailable(): Promise<boolean> {

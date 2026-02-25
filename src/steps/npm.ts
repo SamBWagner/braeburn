@@ -4,7 +4,7 @@ import type { Step, StepRunContext } from "./types.js";
 const npmStep: Step = {
   id: "npm",
   name: "npm",
-  stage: "tools",
+  categoryId: "cli-tools",
   description: "Update all globally installed npm packages",
 
   async checkIsAvailable(): Promise<boolean> {

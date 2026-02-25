@@ -21,7 +21,7 @@ const NVM_INSTALL_COMMAND =
 const nvmStep: Step = {
   id: "nvm",
   name: "Node.js (nvm)",
-  stage: "runtime",
+  categoryId: "runtimes",
   description:
     "Install the latest Node.js via nvm, migrating packages from the current version",
 

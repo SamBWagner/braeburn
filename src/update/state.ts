@@ -1,12 +1,11 @@
 import type { CommandOutputLine } from "../runner.js";
-
-export type StepStage = "runtime" | "tools";
+import type { StepCategoryId } from "../steps/categories.js";
 
 export type DisplayStep = {
   id: string;
   name: string;
   description: string;
-  stage: StepStage;
+  categoryId: StepCategoryId;
 };
 
 export type StepPhase =

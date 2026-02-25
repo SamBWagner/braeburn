@@ -3,8 +3,8 @@ import type { Step, StepRunContext } from "./types.js";
 
 const cleanupStep: Step = {
   id: "cleanup",
-  name: "Cleanup",
-  stage: "tools",
+  name: "homebrew cleanup",
+  categoryId: "maintenance",
   description: "Remove outdated Homebrew downloads and cached versions",
 
   async checkIsAvailable(): Promise<boolean> {

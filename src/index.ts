@@ -52,19 +52,25 @@ program
     "after",
     `
 Step descriptions:
-  Runtime stage (default: off — update the version managers and runtimes themselves):
+  System / Runtimes (default: off — larger changes, enabled intentionally):
   pyenv      Upgrade pyenv, install latest Python 3.x  (requires: pyenv or brew)
   nvm        Install latest Node.js via nvm             (requires: ~/.nvm)
 
-  Tools stage (default: on — update packages installed via the managers above):
+  System / Apps & Packages:
   homebrew   Update Homebrew itself and all installed formulae
   mas        Upgrade Mac App Store apps  (requires: mas)
-  ohmyzsh    Update Oh My Zsh            (requires: ~/.oh-my-zsh)
+  macos      Check for macOS updates, prompt to install
+
+  System / CLI Tools:
   npm        Update global npm packages  (requires: npm)
   pip        Update global pip3 packages (requires: pip3) ⚠ may be fragile
   dotnet     Update .NET global tools    (requires: dotnet)
-  macos      Check for macOS updates, prompt to install
-  cleanup    Clean up Homebrew cache and old downloads
+
+  System / Shell:
+  ohmyzsh    Update Oh My Zsh            (requires: ~/.oh-my-zsh)
+
+  System / Maintenance:
+  cleanup    homebrew cleanup (remove outdated Homebrew cache/downloads)
 
 Examples:
   braeburn                  Run all enabled steps interactively
@@ -72,7 +78,7 @@ Examples:
   braeburn -fy              Same as above
   braeburn homebrew npm     Run only the homebrew and npm steps
   braeburn homebrew -y      Run only homebrew, auto-accept
-  braeburn nvm pyenv        Run only the runtime-stage steps
+  braeburn nvm pyenv        Run only the runtime steps
   `
   )
   .action(
@@ -118,7 +124,7 @@ program
   .option("--nvm", "Show latest nvm log")
   .option("--dotnet", "Show latest .NET log")
   .option("--macos", "Show latest macOS update log")
-  .option("--cleanup", "Show latest cleanup log")
+  .option("--cleanup", "Show latest homebrew cleanup log")
   .addHelpText(
     "after",
     `

@@ -10,7 +10,7 @@ function makeStep(overrides: Partial<DisplayStep> = {}): DisplayStep {
     id: "test",
     name: "Test",
     description: "A test step",
-    stage: "tools",
+    categoryId: "cli-tools",
     ...overrides,
   };
 }
@@ -34,6 +34,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "→ Test\n" +
       "\n" +
       "\n" +
@@ -52,6 +53,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "→ Homebrew\n" +
       "· npm\n" +
       "\n" +
@@ -72,6 +74,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "◐ Test\n" +
       "\n" +
       "\n" +
@@ -93,6 +96,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "◐ Test\n" +
       "\n" +
       "\n" +
@@ -118,6 +122,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "→ Test\n" +
       "\n" +
       "\n" +
@@ -141,6 +146,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "→ Test\n" +
       "\n" +
       "\n" +
@@ -166,6 +172,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "✗ Node.js (nvm)\n" +
       "\n" +
       "\n" +
@@ -189,6 +196,7 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
+      "System / CLI Tools\n" +
       "→ Test\n" +
       "\n" +
       "\n"

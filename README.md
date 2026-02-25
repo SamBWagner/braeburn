@@ -32,20 +32,20 @@ braeburn homebrew npm # run specific steps only
 
 ## Steps
 
-Steps run in two stages. The runtime stage runs first and is **off by default** — upgrading a runtime is a larger change than upgrading a tool, and is best done intentionally.
+Steps are grouped by system capability. For new setups, braeburn uses a conservative default profile: only package-manager-driven CLI/tooling updates are enabled by default.
 
-| Step | Stage | Default | Requires |
+| Step | Category | Default (new setup) | Requires |
 |---|---|---|---|
-| `pyenv` | runtime | off | `pyenv` or Homebrew |
-| `nvm` | runtime | off | `~/.nvm` |
-| `homebrew` | tools | on | `brew` (required) |
-| `mas` | tools | on | `mas` |
-| `ohmyzsh` | tools | on | `~/.oh-my-zsh` |
-| `npm` | tools | on | `npm` |
-| `pip` | tools | on | `pip3` |
-| `dotnet` | tools | on | `dotnet` |
-| `macos` | tools | on | — |
-| `cleanup` | tools | on | `brew` |
+| `pyenv` | Runtimes | off | `pyenv` or Homebrew |
+| `nvm` | Runtimes | off | `~/.nvm` |
+| `homebrew` | Apps & Packages | on | `brew` (required) |
+| `mas` | Apps & Packages | off | `mas` |
+| `macos` | Apps & Packages | off | — |
+| `npm` | CLI Tools | on | `npm` |
+| `pip` | CLI Tools | on | `pip3` |
+| `dotnet` | CLI Tools | on | `dotnet` |
+| `ohmyzsh` | Shell | off | `~/.oh-my-zsh` |
+| `cleanup` (`homebrew cleanup`) | Maintenance | off | `brew` |
 
 ## Requirements
 

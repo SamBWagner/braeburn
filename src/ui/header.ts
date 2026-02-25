@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { LOGO_ART } from "../logo.js";
+import { buildCategorySectionsInOrder, getStepCategoryLabel } from "../steps/index.js";
 import type { DisplayStep, StepPhase, CompletedStepRecord, LogoVisibility } from "./state.js";
 import type { TerminalDimensions } from "./outputBox.js";
 import { getActivityIndicatorFrame } from "./activityIndicator.js";
@@ -82,28 +83,15 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
 
   const phases = deriveAllStepPhases(steps, currentStepIndex, currentPhase, completedStepRecords);
 
-  const hasRuntimeSteps = steps.some((step) => step.stage === "runtime");
-  const hasToolsSteps = steps.some((step) => step.stage === "tools");
-  const showStageLabels = hasRuntimeSteps && hasToolsSteps;
-
   const stepLines: string[] = [];
-  for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
-    const step = steps[stepIndex];
-
-    if (showStageLabels) {
-      const isFirstRuntime = step.stage === "runtime" && (stepIndex === 0 || steps[stepIndex - 1].stage !== "runtime");
-      const isFirstTools = step.stage === "tools" && (stepIndex === 0 || steps[stepIndex - 1].stage !== "tools");
-
-      if (isFirstRuntime) {
-        stepLines.push(chalk.dim("Runtimes"));
-      } else if (isFirstTools) {
-        stepLines.push(chalk.dim("Tools"));
-      }
+  const indexedSteps = steps.map((step, stepIndex) => ({ step, stepIndex, categoryId: step.categoryId }));
+  for (const section of buildCategorySectionsInOrder(indexedSteps)) {
+    stepLines.push(chalk.dim(`System / ${getStepCategoryLabel(section.categoryId)}`));
+    for (const indexedStep of section.items) {
+      const icon = stepTrackerIcon(phases[indexedStep.stepIndex], activityFrameIndex);
+      const name = isActivePhase(phases[indexedStep.stepIndex]) ? chalk.white(indexedStep.step.name) : chalk.dim(indexedStep.step.name);
+      stepLines.push(`${icon}${name}`);
     }
-
-    const icon = stepTrackerIcon(phases[stepIndex], activityFrameIndex);
-    const name = isActivePhase(phases[stepIndex]) ? chalk.white(step.name) : chalk.dim(step.name);
-    stepLines.push(`${icon}${name}`);
   }
 
   const rightColumnLines: string[] = [

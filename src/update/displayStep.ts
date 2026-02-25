@@ -6,7 +6,7 @@ export function toDisplayStep(step: Step): DisplayStep {
     id: step.id,
     name: step.name,
     description: step.description,
-    stage: step.stage,
+    categoryId: step.categoryId,
   };
 }
 

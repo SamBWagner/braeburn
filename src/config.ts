@@ -5,17 +5,50 @@ import { parse, stringify } from "smol-toml";
 
 export const PROTECTED_STEP_IDS = new Set(["homebrew"]);
 
-export const DEFAULT_OFF_STEP_IDS = new Set(["nvm", "pyenv"]);
+export type ConfigDefaultsProfile = "legacy" | "conservative-v2";
+
+export const LEGACY_DEFAULT_OFF_STEP_IDS = new Set(["nvm", "pyenv"]);
+export const CONSERVATIVE_DEFAULT_ON_STEP_IDS = new Set(["homebrew", "npm", "pip", "dotnet"]);
 
 export type BraeburnConfig = {
   // Exception to the no-boolean-parameters rule: persisted config stores explicit on/off flags.
   steps: Record<string, boolean>;
   logo?: boolean;
+  defaultsProfile?: ConfigDefaultsProfile;
 };
 
 const EMPTY_CONFIG: BraeburnConfig = { steps: {} };
 
 const LOGO_SETTING_ID = "logo";
+const DEFAULTS_PROFILE_SETTING_ID = "defaultsProfile";
+const LEGACY_PROFILE: ConfigDefaultsProfile = "legacy";
+
+function resolveDefaultsProfile(config: BraeburnConfig): ConfigDefaultsProfile {
+  return config.defaultsProfile ?? LEGACY_PROFILE;
+}
+
+function parseDefaultsProfile(rawValue: unknown): ConfigDefaultsProfile | undefined {
+  if (rawValue === "legacy" || rawValue === "conservative-v2") {
+    return rawValue;
+  }
+  return undefined;
+}
+
+function isStepEnabledByDefault(profile: ConfigDefaultsProfile, stepId: string): boolean {
+  if (profile === "conservative-v2") {
+    return CONSERVATIVE_DEFAULT_ON_STEP_IDS.has(stepId);
+  }
+
+  return !LEGACY_DEFAULT_OFF_STEP_IDS.has(stepId);
+}
+
+function shouldPersistStepOverride(
+  profile: ConfigDefaultsProfile,
+  stepId: string,
+  desiredState: "enable" | "disable",
+): boolean {
+  return isStepEnabledByDefault(profile, stepId) !== (desiredState === "enable");
+}
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -43,8 +76,10 @@ export async function readConfig(): Promise<BraeburnConfig> {
   const configPath = await resolveConfigPath();
   try {
     const raw = await readFile(configPath, "utf-8");
-    const parsed = parse(raw) as Partial<BraeburnConfig>;
-    return { steps: parsed.steps ?? {}, logo: parsed.logo };
+    const parsed = parse(raw) as Record<string, unknown>;
+    const parsedSteps = parsed.steps as Record<string, boolean> | undefined;
+    const defaultsProfile = parseDefaultsProfile(parsed[DEFAULTS_PROFILE_SETTING_ID]);
+    return { steps: parsedSteps ?? {}, logo: parsed.logo as boolean | undefined, defaultsProfile };
   } catch {
     return structuredClone(EMPTY_CONFIG);
   }
@@ -59,8 +94,14 @@ export async function writeConfig(config: BraeburnConfig): Promise<void> {
 export function isSettingEnabled(config: BraeburnConfig, settingId: string): boolean {
   if (PROTECTED_STEP_IDS.has(settingId)) return true;
   if (settingId === LOGO_SETTING_ID) return config.logo !== false;
-  if (DEFAULT_OFF_STEP_IDS.has(settingId)) return config.steps[settingId] === true;
-  return config.steps[settingId] !== false;
+  const defaultsProfile = resolveDefaultsProfile(config);
+  const explicitStepOverride = config.steps[settingId];
+
+  if (explicitStepOverride === undefined) {
+    return isStepEnabledByDefault(defaultsProfile, settingId);
+  }
+
+  return explicitStepOverride === true;
 }
 
 export function isStepEnabled(config: BraeburnConfig, stepId: string): boolean {
@@ -83,19 +124,41 @@ export function applySettingToConfig(config: BraeburnConfig, settingId: string, 
     return updatedConfig;
   }
 
-  if (DEFAULT_OFF_STEP_IDS.has(settingId)) {
-    if (desiredState === "enable") {
-      updatedConfig.steps[settingId] = true;
-    } else {
-      delete updatedConfig.steps[settingId];
-    }
+  const defaultsProfile = resolveDefaultsProfile(updatedConfig);
+  const shouldPersistOverride = shouldPersistStepOverride(defaultsProfile, settingId, desiredState);
+
+  if (!shouldPersistOverride) {
+    delete updatedConfig.steps[settingId];
     return updatedConfig;
   }
 
-  if (desiredState === "enable") {
-    delete updatedConfig.steps[settingId];
-  } else {
-    updatedConfig.steps[settingId] = false;
-  }
+  updatedConfig.steps[settingId] = desiredState === "enable";
   return updatedConfig;
+}
+
+export function cleanConfigForWrite(config: BraeburnConfig): BraeburnConfig {
+  const defaultsProfile = resolveDefaultsProfile(config);
+  const cleaned: BraeburnConfig = { steps: {} };
+
+  for (const [stepId, explicitState] of Object.entries(config.steps)) {
+    if (PROTECTED_STEP_IDS.has(stepId)) {
+      continue;
+    }
+
+    const desiredState = explicitState === true ? "enable" : "disable";
+    if (!shouldPersistStepOverride(defaultsProfile, stepId, desiredState)) {
+      continue;
+    }
+    cleaned.steps[stepId] = explicitState;
+  }
+
+  if (config.logo === false) {
+    cleaned.logo = false;
+  }
+
+  if (config.defaultsProfile && config.defaultsProfile !== LEGACY_PROFILE) {
+    cleaned.defaultsProfile = config.defaultsProfile;
+  }
+
+  return cleaned;
 }

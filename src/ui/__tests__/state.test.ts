@@ -7,7 +7,7 @@ function makeStep(overrides: Partial<DisplayStep> = {}): DisplayStep {
     id: "test",
     name: "Test",
     description: "A test step",
-    stage: "tools",
+    categoryId: "cli-tools",
     ...overrides,
   };
 }

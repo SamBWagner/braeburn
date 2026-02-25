@@ -12,7 +12,7 @@ function makeStep(overrides: Partial<SetupStepView> = {}): SetupStepView {
     id: "test-step",
     name: "Test Step",
     description: "A test step",
-    stage: "tools",
+    categoryId: "cli-tools",
     ...overrides,
   };
 }
@@ -54,6 +54,8 @@ const SETUP_HEADER = [
   "",
 ].join("\n");
 
+const CLI_TOOLS_SECTION_DIVIDER = "  ── System / CLI Tools ──────────────────────────────────────────";
+
 describe("buildLoadingScreen", () => {
   it("returns the logo, welcome message, and loading indicator", () => {
     const expected = [
@@ -76,6 +78,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cf  Test Step           installed",
       "           A test step",
       "",
@@ -95,6 +98,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cf  Homebrew            installed",
       "           Update Homebrew packages",
       "    \u25cf  npm                 installed",
@@ -119,6 +123,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cf  A                   installed",
       "           First description",
       "    \u25cf  B                   installed",
@@ -137,6 +142,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cf  Test Step           required",
       "           A test step",
       "",
@@ -153,6 +159,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cf  Test Step           not installed",
       "           A test step",
       "",
@@ -174,6 +181,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cf  Test Step           not installed  \u2192 will offer to install via Homebrew",
       "           A test step",
       "",
@@ -190,6 +198,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cb  Test Step           installed",
       "           A test step",
       "",
@@ -210,6 +219,7 @@ describe("buildSetupScreen", () => {
 
     const expected = [
       SETUP_HEADER,
+      CLI_TOOLS_SECTION_DIVIDER,
       "  \u203a \u25cf  StepA               installed",
       "           Desc A",
       "    \u25cb  StepB               installed",

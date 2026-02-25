@@ -14,7 +14,7 @@ function makeStep(overrides: Partial<DisplayStep> = {}): DisplayStep {
     id: "test",
     name: "Test",
     description: "A test step",
-    stage: "tools",
+    categoryId: "cli-tools",
     ...overrides,
   };
 }
@@ -199,6 +199,7 @@ describe("buildHeaderLines", () => {
       "braeburn v1.2.3",
       "macOS system updater",
       "",
+      "System / CLI Tools",
       "· Homebrew",
       "· npm",
     ]);
@@ -218,8 +219,9 @@ describe("buildHeaderLines", () => {
     expect(stripped.length).toBe(12);
     expect(stripped[0]).toBe("                ;                   braeburn v1.0.0");
     expect(stripped[1]).toBe("               :x :                 macOS system updater");
-    expect(stripped[3]).toBe("    x+x;      XXX&                  · Homebrew");
-    expect(stripped[4]).toBe("     :xx&&&   &&&                   · npm");
+    expect(stripped[3]).toBe("    x+x;      XXX&                  System / CLI Tools");
+    expect(stripped[4]).toBe("     :xx&&&   &&&                   · Homebrew");
+    expect(stripped[5]).toBe("        +X +X x+  .:::              · npm");
   });
 
   it("returns fewer lines when logo is hidden than when visible", () => {
@@ -240,15 +242,15 @@ describe("buildHeaderLines", () => {
       currentPhase: "pending",
       completedStepRecords: [],
     });
-    expect(withoutLogo.length).toBe(5);
+    expect(withoutLogo.length).toBe(6);
     expect(withLogo.length).toBe(12);
   });
 
-  it("inserts stage labels when both runtime and tools steps are present", () => {
+  it("inserts category labels when multiple categories are present", () => {
     const mixedSteps = [
-      makeStep({ id: "nvm", name: "Node.js (nvm)", stage: "runtime" }),
-      makeStep({ id: "brew", name: "Homebrew", stage: "tools" }),
-      makeStep({ id: "npm", name: "npm", stage: "tools" }),
+      makeStep({ id: "nvm", name: "Node.js (nvm)", categoryId: "runtimes" }),
+      makeStep({ id: "brew", name: "Homebrew", categoryId: "apps-packages" }),
+      makeStep({ id: "npm", name: "npm", categoryId: "cli-tools" }),
     ];
 
     const lines = buildHeaderLines({
@@ -264,15 +266,16 @@ describe("buildHeaderLines", () => {
       "braeburn v1.0.0",
       "macOS system updater",
       "",
-      "Runtimes",
+      "System / Runtimes",
       "· Node.js (nvm)",
-      "Tools",
+      "System / Apps & Packages",
       "· Homebrew",
+      "System / CLI Tools",
       "· npm",
     ]);
   });
 
-  it("omits stage labels when all steps are the same stage", () => {
+  it("includes the category label when all steps are in one category", () => {
     const lines = buildHeaderLines({
       steps,
       version: "1.0.0",
@@ -282,7 +285,6 @@ describe("buildHeaderLines", () => {
       completedStepRecords: [],
     });
     const stripped = lines.map(stripAnsi);
-    expect(stripped).not.toContain("Tools");
-    expect(stripped).not.toContain("Runtimes");
+    expect(stripped).toContain("System / CLI Tools");
   });
 });
