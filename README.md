@@ -24,7 +24,9 @@ braeburn homebrew npm # run specific steps only
 |---|---|
 | `braeburn [steps...] [-y]` | Run update steps (default) |
 | `braeburn log [step]` | View the latest output log for a step |
-| `braeburn config` | View current configuration |
+| `braeburn config` | Show config subcommand help |
+| `braeburn config list` | Print current configuration |
+| `braeburn config update` | Open interactive configuration editor |
 | `braeburn config update --no-<step>` | Disable a step |
 | `braeburn config update --<step>` | Re-enable a step |
 

@@ -143,19 +143,30 @@ Examples:
 const configCommand = program
   .command("config")
   .description("View or edit braeburn configuration")
+  .action(() => {
+    configCommand.outputHelp();
+  });
+
+configCommand
+  .command("list")
+  .description("Print current configuration")
   .action(async () => {
-    await runConfigCommand({ allSteps: ALL_STEPS });
+    await runConfigCommand({
+      allSteps: ALL_STEPS,
+      outputMode: "non-interactive",
+    });
   });
 
 const configurableSteps = ALL_STEPS.filter((step) => !PROTECTED_STEP_IDS.has(step.id));
 
 const configUpdateCommand = configCommand
   .command("update")
-  .description("Enable or disable individual update steps")
+  .description("Edit configuration (interactive by default, flags for direct updates)")
   .addHelpText(
     "after",
     `
 Examples:
+  braeburn config update                     Open interactive config editor
   braeburn config update --no-logo           Hide the logo
   braeburn config update --no-ohmyzsh        Disable Oh My Zsh updates
   braeburn config update --no-pip --no-nvm   Disable pip and nvm updates
@@ -171,7 +182,7 @@ for (const step of configurableSteps) {
   configUpdateCommand.option(`--${step.id}`, `Enable ${step.name} updates`);
 }
 
-configUpdateCommand.action(function () {
+configUpdateCommand.action(async function () {
   // Commander defaults --no-* to true, so we use getOptionValueSource to detect explicit CLI flags.
   const settingUpdates: Record<string, "enable" | "disable"> = {};
 
@@ -187,7 +198,15 @@ configUpdateCommand.action(function () {
     settingUpdates["logo"] = configUpdateCommand.opts().logo ? "enable" : "disable";
   }
 
-  runConfigUpdateCommand({ settingUpdates, allSteps: ALL_STEPS });
+  if (Object.keys(settingUpdates).length === 0) {
+    await runConfigCommand({
+      allSteps: ALL_STEPS,
+      outputMode: "interactive",
+    });
+    return;
+  }
+
+  await runConfigUpdateCommand({ settingUpdates, allSteps: ALL_STEPS });
 });
 
 function resolveStepsByIds(stepIds: string[]): Step[] {

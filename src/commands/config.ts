@@ -1,3 +1,4 @@
+import readline from "node:readline";
 import chalk from "chalk";
 import {
   readConfig,
@@ -12,12 +13,31 @@ import {
   type BraeburnConfig,
 } from "../config.js";
 import type { Step } from "../steps/index.js";
+import { createScreenRenderer } from "../ui/screen.js";
+import { hideCursorDuringExecution } from "../ui/terminal.js";
 
 type RunConfigCommandOptions = {
   allSteps: Step[];
+  outputMode: "interactive" | "non-interactive";
 };
 
 type DesiredState = "enable" | "disable";
+
+type SettingProtection = "configurable" | "protected";
+type ConfigSelectionState = "enabled" | "disabled";
+
+type ConfigKeypress = {
+  name?: string;
+  ctrl?: boolean;
+};
+
+type ConfigViewItem = {
+  id: string;
+  label: string;
+  description: string;
+  protection: SettingProtection;
+  selection: ConfigSelectionState;
+};
 
 type RunConfigUpdateCommandOptions = {
   settingUpdates: Record<string, DesiredState>;
@@ -25,38 +45,22 @@ type RunConfigUpdateCommandOptions = {
 };
 
 export async function runConfigCommand(options: RunConfigCommandOptions): Promise<void> {
-  const { allSteps } = options;
+  const { allSteps, outputMode } = options;
   const config = await readConfig();
   const configPath = await resolveConfigPath();
 
-  const STEP_COL = 12;
-  const DIVIDER = "─".repeat(STEP_COL + 16);
-
-  process.stdout.write(`Config: ${chalk.dim(configPath)}\n\n`);
-  process.stdout.write(`${"Step".padEnd(STEP_COL)}Status\n`);
-  process.stdout.write(`${DIVIDER}\n`);
-
-  const logoEnabled = isLogoEnabled(config);
-  process.stdout.write(`${"logo".padEnd(STEP_COL)}${logoEnabled ? chalk.green("enabled") : chalk.red("disabled")}\n`);
-  process.stdout.write(`${DIVIDER}\n`);
-
-  for (const step of allSteps) {
-    const isProtected = PROTECTED_STEP_IDS.has(step.id);
-    const enabled = isStepEnabled(config, step.id);
-
-    let statusText: string;
-    if (isProtected) {
-      statusText = chalk.dim("always enabled");
-    } else if (enabled) {
-      statusText = chalk.green("enabled");
-    } else {
-      statusText = chalk.red("disabled");
-    }
-
-    process.stdout.write(`${step.id.padEnd(STEP_COL)}${statusText}\n`);
+  if (outputMode === "non-interactive") {
+    process.stdout.write(buildConfigTableOutput({ config, configPath, allSteps }));
+    return;
   }
 
-  process.stdout.write(`\n`);
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    process.stderr.write("Interactive mode requires a TTY. Showing non-interactive output.\n\n");
+    process.stdout.write(buildConfigTableOutput({ config, configPath, allSteps }));
+    return;
+  }
+
+  await runInteractiveConfigView({ config, configPath, allSteps });
 }
 
 type ConfigChange = { label: string; from: DesiredState; to: DesiredState };
@@ -133,6 +137,222 @@ export async function runConfigUpdateCommand(options: RunConfigUpdateCommandOpti
 
   const configPath = await resolveConfigPath();
   process.stdout.write(`\nConfig saved to ${chalk.dim(configPath)}\n`);
+}
+
+type BuildConfigTableOutputOptions = {
+  config: BraeburnConfig;
+  configPath: string;
+  allSteps: Step[];
+};
+
+export function buildConfigTableOutput(options: BuildConfigTableOutputOptions): string {
+  const { config, configPath, allSteps } = options;
+  const lines: string[] = [];
+  const stepColumnWidth = 12;
+  const divider = "─".repeat(stepColumnWidth + 16);
+
+  lines.push(`Config: ${chalk.dim(configPath)}`);
+  lines.push("");
+  lines.push(`${"Step".padEnd(stepColumnWidth)}Status`);
+  lines.push(divider);
+
+  const logoEnabled = isLogoEnabled(config);
+  lines.push(`${"logo".padEnd(stepColumnWidth)}${logoEnabled ? chalk.green("enabled") : chalk.red("disabled")}`);
+  lines.push(divider);
+
+  for (const step of allSteps) {
+    const isProtected = PROTECTED_STEP_IDS.has(step.id);
+    const enabled = isStepEnabled(config, step.id);
+
+    let statusText: string;
+    if (isProtected) {
+      statusText = chalk.dim("always enabled");
+    } else if (enabled) {
+      statusText = chalk.green("enabled");
+    } else {
+      statusText = chalk.red("disabled");
+    }
+
+    lines.push(`${step.id.padEnd(stepColumnWidth)}${statusText}`);
+  }
+
+  lines.push("");
+  return lines.join("\n") + "\n";
+}
+
+function buildConfigViewItems(config: BraeburnConfig, allSteps: Step[]): ConfigViewItem[] {
+  const viewItems: ConfigViewItem[] = [
+    {
+      id: "logo",
+      label: "logo",
+      description: "Show the braeburn logo in command output",
+      protection: "configurable",
+      selection: isLogoEnabled(config) ? "enabled" : "disabled",
+    },
+  ];
+
+  for (const step of allSteps) {
+    viewItems.push({
+      id: step.id,
+      label: step.id,
+      description: step.description,
+      protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
+      selection: isStepEnabled(config, step.id) ? "enabled" : "disabled",
+    });
+  }
+
+  return viewItems;
+}
+
+type BuildInteractiveConfigScreenOptions = {
+  configPath: string;
+  items: ConfigViewItem[];
+  cursorIndex: number;
+};
+
+function buildInteractiveConfigScreen(options: BuildInteractiveConfigScreenOptions): string {
+  const { configPath, items, cursorIndex } = options;
+  const lines: string[] = [];
+
+  lines.push(`Config: ${chalk.dim(configPath)}`);
+  lines.push("");
+  lines.push(`  ${chalk.dim("↑↓ navigate    Space toggle    Return save    q quit")}`);
+  lines.push("");
+
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    const item = items[itemIndex];
+    const isCursor = itemIndex === cursorIndex;
+    const cursor = isCursor ? chalk.cyan("›") : " ";
+    const marker = item.selection === "enabled" ? chalk.green("●") : chalk.dim("○");
+    const label = isCursor ? chalk.bold.white(item.label.padEnd(12)) : chalk.white(item.label.padEnd(12));
+
+    let status: string;
+    if (item.protection === "protected") {
+      status = chalk.dim("always enabled");
+    } else if (item.selection === "enabled") {
+      status = chalk.green("enabled");
+    } else {
+      status = chalk.red("disabled");
+    }
+
+    lines.push(`  ${cursor} ${marker}  ${label} ${status}`);
+
+    if (isCursor) {
+      lines.push(`        ${chalk.dim(item.description)}`);
+    }
+  }
+
+  const enabledCount = items.filter((item) => item.selection === "enabled").length;
+  lines.push("");
+  lines.push(`  ${chalk.dim(`${enabledCount} of ${items.length} settings enabled`)}`);
+  lines.push("");
+  return lines.join("\n") + "\n";
+}
+
+type RunInteractiveConfigViewOptions = {
+  config: BraeburnConfig;
+  configPath: string;
+  allSteps: Step[];
+};
+
+async function runInteractiveConfigView(options: RunInteractiveConfigViewOptions): Promise<void> {
+  const { config, configPath, allSteps } = options;
+  const render = createScreenRenderer();
+  const restoreCursor = hideCursorDuringExecution({ screenBuffer: "alternate" });
+  const items = buildConfigViewItems(config, allSteps);
+  let cursorIndex = 0;
+  let completionOutput = "";
+
+  try {
+    render(buildInteractiveConfigScreen({ configPath, items, cursorIndex }));
+
+    const interactionResult = await new Promise<"save" | "cancel">((resolve) => {
+      readline.emitKeypressEvents(process.stdin);
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+      }
+
+      const completeInteraction = (result: "save" | "cancel") => {
+        process.stdin.removeListener("keypress", onKeypress);
+        if (process.stdin.isTTY) {
+          process.stdin.setRawMode(false);
+        }
+        process.stdin.pause();
+        resolve(result);
+      };
+
+      const onKeypress = (_char: string, key: ConfigKeypress) => {
+        if (key.ctrl && key.name === "c") {
+          process.exit(130);
+        }
+
+        if (key.name === "up" || key.name === "k") {
+          cursorIndex = Math.max(0, cursorIndex - 1);
+          render(buildInteractiveConfigScreen({ configPath, items, cursorIndex }));
+          return;
+        }
+
+        if (key.name === "down" || key.name === "j") {
+          cursorIndex = Math.min(items.length - 1, cursorIndex + 1);
+          render(buildInteractiveConfigScreen({ configPath, items, cursorIndex }));
+          return;
+        }
+
+        if (key.name === "space") {
+          const selectedItem = items[cursorIndex];
+          if (selectedItem.protection === "configurable") {
+            selectedItem.selection = selectedItem.selection === "enabled" ? "disabled" : "enabled";
+            render(buildInteractiveConfigScreen({ configPath, items, cursorIndex }));
+          }
+          return;
+        }
+
+        if (key.name === "return") {
+          completeInteraction("save");
+          return;
+        }
+
+        if (key.name === "q" || key.name === "escape") {
+          completeInteraction("cancel");
+        }
+      };
+
+      process.stdin.on("keypress", onKeypress);
+      process.stdin.resume();
+    });
+
+    if (interactionResult === "cancel") {
+      completionOutput = "No changes saved.\n";
+    } else {
+      const settingUpdates: Record<string, DesiredState> = {};
+      for (const item of items) {
+        if (item.protection === "protected") {
+          continue;
+        }
+        settingUpdates[item.id] = item.selection === "enabled" ? "enable" : "disable";
+      }
+
+      const { updatedConfig, changes } = applyConfigUpdates(config, settingUpdates);
+      if (changes.length === 0) {
+        completionOutput = "No changes — already set as requested.\n";
+      } else {
+        await writeCleanConfig(updatedConfig);
+        const outputLines: string[] = [];
+        for (const { label, from, to } of changes) {
+          const fromLabel = from === "enable" ? chalk.green("enabled") : chalk.red("disabled");
+          const toLabel = to === "enable" ? chalk.green("enabled") : chalk.red("disabled");
+          outputLines.push(`  ${label.padEnd(12)} ${fromLabel} → ${toLabel}`);
+        }
+        outputLines.push("");
+        outputLines.push(`Config saved to ${chalk.dim(configPath)}`);
+        completionOutput = `${outputLines.join("\n")}\n`;
+      }
+    }
+  } finally {
+    restoreCursor();
+  }
+
+  process.stdout.write(completionOutput);
 }
 
 async function writeCleanConfig(config: BraeburnConfig): Promise<void> {

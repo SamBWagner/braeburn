@@ -10,14 +10,8 @@ export type ScreenRenderer = (content: string) => void;
 export function createScreenRenderer(
   output: NodeJS.WritableStream = process.stdout,
 ): ScreenRenderer {
-  let hasAnchor = false;
-
   return (content: string): void => {
-    if (!hasAnchor) {
-      output.write("\x1b7");
-      hasAnchor = true;
-    }
-    output.write("\x1b8\x1b[J");
+    output.write("\x1b[H\x1b[2J");
     output.write(content);
   };
 }
