@@ -2,7 +2,7 @@ import { buildHeaderLines } from "./header.js";
 import { buildActiveStepLines } from "./currentStep.js";
 import { buildOutputBoxLines, type TerminalDimensions } from "./outputBox.js";
 import { buildPromptLines } from "./prompt.js";
-import { buildVersionReportLines } from "./versionReport.js";
+import { buildFailedStepLogHintLines, buildVersionReportLines } from "./versionReport.js";
 import type { AppState } from "./state.js";
 
 export type ScreenRenderer = (content: string) => void;
@@ -18,6 +18,18 @@ export function createScreenRenderer(
 
 export function buildScreen(state: AppState, terminalDimensions?: TerminalDimensions): string {
   const lines: string[] = [];
+  const failedStepIds = state.completedStepRecords.flatMap((record, stepIndex) => {
+    if (record.phase !== "failed") {
+      return [];
+    }
+
+    const failedStep = state.steps[stepIndex];
+    if (!failedStep) {
+      return [];
+    }
+
+    return [failedStep.id];
+  });
 
   lines.push(
     ...buildHeaderLines({
@@ -36,6 +48,11 @@ export function buildScreen(state: AppState, terminalDimensions?: TerminalDimens
     if (state.versionReport) {
       lines.push("");
       lines.push(...buildVersionReportLines(state.versionReport));
+    }
+
+    if (failedStepIds.length > 0) {
+      lines.push("");
+      lines.push(...buildFailedStepLogHintLines(failedStepIds));
     }
   } else {
     const currentStep = state.steps[state.currentStepIndex];

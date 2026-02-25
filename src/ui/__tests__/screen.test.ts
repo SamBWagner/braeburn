@@ -152,6 +152,33 @@ describe("buildScreen", () => {
     );
   });
 
+  it("shows failed-step log hint lines when finished with failures", () => {
+    const state = makeState({
+      steps: [makeStep({ id: "nvm", name: "Node.js (nvm)" })],
+      completedStepRecords: [{ phase: "failed", summaryNote: "nvm error" }],
+      runCompletion: "finished",
+      versionReport: [
+        { label: "Node", value: "v22.0.0" },
+      ],
+    });
+    const screen = buildScreen(state, DIMENSIONS);
+    expect(stripAnsi(screen)).toBe(
+      "braeburn v1.0.0\n" +
+      "macOS system updater\n" +
+      "\n" +
+      "✗ Node.js (nvm)\n" +
+      "\n" +
+      "\n" +
+      "  ─── Versions ─────────────────────────\n" +
+      "  · Node: v22.0.0\n" +
+      "\n" +
+      "  ✓ All done!\n" +
+      "\n" +
+      "  ✗ Step nvm failed. Please run braeburn log --nvm to see what happened.\n" +
+      "\n"
+    );
+  });
+
   it("renders only the header when finished without a version report", () => {
     const state = makeState({
       runCompletion: "finished",

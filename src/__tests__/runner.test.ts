@@ -95,13 +95,18 @@ describe("runShellCommand", () => {
   });
 
   it("throws for a command that exits non-zero", async () => {
+    const logLines: string[] = [];
+
     await expect(
       runShellCommand({
         shellCommand: "exit 1",
         onOutputLine: () => {},
-        logWriter: async () => {},
+        logWriter: async (line) => { logLines.push(line); },
       })
     ).rejects.toThrow();
+
+    expect(logLines).toContain("[braeburn] Command failed: exit 1");
+    expect(logLines).toContain("[braeburn] Exit code: 1");
   });
 
   it("handles a command with both stdout and stderr", async () => {
@@ -115,5 +120,24 @@ describe("runShellCommand", () => {
 
     expect(lines).toContainEqual({ text: "out", source: "stdout" });
     expect(lines).toContainEqual({ text: "err", source: "stderr" });
+  });
+
+  it("writes stderr and stdout tails to the log on failures", async () => {
+    const logLines: string[] = [];
+
+    await expect(
+      runShellCommand({
+        shellCommand: "echo out-before-fail && echo err-before-fail >&2 && exit 7",
+        onOutputLine: () => {},
+        logWriter: async (line) => { logLines.push(line); },
+      })
+    ).rejects.toThrow();
+
+    expect(logLines).toContain("[braeburn] Command failed: echo out-before-fail && echo err-before-fail >&2 && exit 7");
+    expect(logLines).toContain("[braeburn] Exit code: 7");
+    expect(logLines).toContain("[braeburn] stderr tail (1):");
+    expect(logLines).toContain("  err-before-fail");
+    expect(logLines).toContain("[braeburn] stdout tail (1):");
+    expect(logLines).toContain("  out-before-fail");
   });
 });

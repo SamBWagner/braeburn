@@ -11,3 +11,9 @@ export function buildVersionReportLines(versions: ResolvedVersion[]): string[] {
     `  ${chalk.green.bold("✓")} ${chalk.bold("All done!")}`,
   ];
 }
+
+export function buildFailedStepLogHintLines(failedStepIds: string[]): string[] {
+  return failedStepIds.map((stepId) =>
+    `  ${chalk.red.bold("✗")} ${chalk.bold(`Step ${stepId} failed.`)} ${chalk.dim(`Please run braeburn log --${stepId} to see what happened.`)}`
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildVersionReportLines } from "../versionReport.js";
+import { buildFailedStepLogHintLines, buildVersionReportLines } from "../versionReport.js";
 import { stripAnsi } from "../../__tests__/helpers.js";
 import type { ResolvedVersion } from "../state.js";
 
@@ -39,5 +39,20 @@ describe("buildVersionReportLines", () => {
       "",
       "  ✓ All done!",
     ]);
+  });
+});
+
+describe("buildFailedStepLogHintLines", () => {
+  it("renders a one-line log hint for each failed step id", () => {
+    const lines = buildFailedStepLogHintLines(["nvm", "pip"]);
+    expect(lines.map(stripAnsi)).toEqual([
+      "  ✗ Step nvm failed. Please run braeburn log --nvm to see what happened.",
+      "  ✗ Step pip failed. Please run braeburn log --pip to see what happened.",
+    ]);
+  });
+
+  it("returns an empty list when no steps failed", () => {
+    const lines = buildFailedStepLogHintLines([]);
+    expect(lines).toEqual([]);
   });
 });
