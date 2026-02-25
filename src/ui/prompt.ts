@@ -4,6 +4,7 @@ import type { CurrentPrompt } from "./state.js";
 
 type KeypressKey = {
   name?: string;
+  // Exception to the no-boolean-parameters rule: Node's keypress event shape exposes modifier flags as booleans.
   ctrl?: boolean;
 };
 

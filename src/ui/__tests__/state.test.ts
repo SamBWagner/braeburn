@@ -14,7 +14,7 @@ function makeStep(overrides: Partial<DisplayStep> = {}): DisplayStep {
 
 describe("createInitialAppState", () => {
   it("returns state with the provided steps", () => {
-    const steps = [makeStep({ id: "a" }), makeStep({ id: "b" })];
+    const steps = [makeStep({ id: "first-step" }), makeStep({ id: "second-step" })];
     const state = createInitialAppState(steps, "1.0.0", "visible");
     expect(state.steps).toBe(steps);
   });

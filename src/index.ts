@@ -23,6 +23,15 @@ const BRAEBURN_VERSION = packageJson.version;
 
 const program = new Command();
 
+type UpdateCommandCliOptions = {
+  // Exception to the no-boolean-parameters rule: Commander provides flag values as booleans.
+  yes?: boolean;
+  force?: boolean;
+  logo?: boolean;
+};
+
+type LogCommandCliOptions = Record<string, boolean | undefined>;
+
 program
   .name("braeburn")
   .description("macOS system updater")
@@ -67,7 +76,7 @@ Examples:
   `
   )
   .action(
-    async (stepArguments: string[], options: { yes?: boolean; force?: boolean; logo?: boolean }) => {
+    async (stepArguments: string[], options: UpdateCommandCliOptions) => {
       const autoYes = options.yes === true || options.force === true;
 
       if (!(await configFileExists())) {
@@ -123,7 +132,7 @@ Examples:
   .action(
     (
       stepArgument: string | undefined,
-      options: Record<string, boolean | undefined>
+      options: LogCommandCliOptions
     ) => {
       const stepIdFromFlag = ALL_STEPS.map((step) => step.id).find(
         (stepId) => options[stepId] === true

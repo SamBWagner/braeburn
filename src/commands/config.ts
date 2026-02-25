@@ -26,6 +26,7 @@ type DesiredState = "enable" | "disable";
 type SettingProtection = "configurable" | "protected";
 type ConfigSelectionState = "enabled" | "disabled";
 
+// Exception to the no-boolean-parameters rule: Node's keypress event shape exposes modifier flags as booleans.
 type ConfigKeypress = {
   name?: string;
   ctrl?: boolean;
@@ -281,7 +282,7 @@ async function runInteractiveConfigView(options: RunInteractiveConfigViewOptions
         resolve(result);
       };
 
-      const onKeypress = (_char: string, key: ConfigKeypress) => {
+      const onKeypress = (_typedCharacter: string, key: ConfigKeypress) => {
         if (key.ctrl && key.name === "c") {
           process.exit(130);
         }

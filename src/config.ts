@@ -8,6 +8,7 @@ export const PROTECTED_STEP_IDS = new Set(["homebrew"]);
 export const DEFAULT_OFF_STEP_IDS = new Set(["nvm", "pyenv"]);
 
 export type BraeburnConfig = {
+  // Exception to the no-boolean-parameters rule: persisted config stores explicit on/off flags.
   steps: Record<string, boolean>;
   logo?: boolean;
 };

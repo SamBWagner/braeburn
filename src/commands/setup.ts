@@ -28,6 +28,7 @@ export type SelectableStep = {
 
 type KeypressKey = {
   name?: string;
+  // Exception to the no-boolean-parameters rule: Node's keypress event shape exposes modifier flags as booleans.
   ctrl?: boolean;
 };
 
@@ -139,7 +140,7 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
       readline.emitKeypressEvents(process.stdin);
       if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
-      const handleKeypress = (_char: string, key: KeypressKey) => {
+      const handleKeypress = (_typedCharacter: string, key: KeypressKey) => {
         if (key?.ctrl && key?.name === "c") {
           process.exit(130);
         }

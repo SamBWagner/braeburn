@@ -109,9 +109,9 @@ describe("isActivePhase", () => {
 
 describe("deriveAllStepPhases", () => {
   const steps = [
-    makeStep({ id: "a" }),
-    makeStep({ id: "b" }),
-    makeStep({ id: "c" }),
+    makeStep({ id: "first-step" }),
+    makeStep({ id: "second-step" }),
+    makeStep({ id: "third-step" }),
   ];
 
   it("assigns completed phases from records", () => {

@@ -89,8 +89,8 @@ describe("buildSetupScreen", () => {
 
   it("renders two items with cursor on the first", () => {
     const items = [
-      makeSelectableStep({ step: makeStep({ id: "a", name: "Homebrew", description: "Update Homebrew packages" }) }),
-      makeSelectableStep({ step: makeStep({ id: "b", name: "npm", description: "Update npm packages" }) }),
+      makeSelectableStep({ step: makeStep({ id: "homebrew-step", name: "Homebrew", description: "Update Homebrew packages" }) }),
+      makeSelectableStep({ step: makeStep({ id: "npm-step", name: "npm", description: "Update npm packages" }) }),
     ];
 
     const expected = [
@@ -110,10 +110,10 @@ describe("buildSetupScreen", () => {
   it("shows description only for the cursor item, not for other items", () => {
     const items = [
       makeSelectableStep({
-        step: makeStep({ id: "a", name: "A", description: "First description" }),
+        step: makeStep({ id: "first-step", name: "A", description: "First description" }),
       }),
       makeSelectableStep({
-        step: makeStep({ id: "b", name: "B", description: "Second description" }),
+        step: makeStep({ id: "second-step", name: "B", description: "Second description" }),
       }),
     ];
 
@@ -203,9 +203,9 @@ describe("buildSetupScreen", () => {
 
   it("shows the correct enabled count with mixed selection", () => {
     const items = [
-      makeSelectableStep({ step: makeStep({ id: "a", name: "StepA", description: "Desc A" }), selection: "selected" }),
-      makeSelectableStep({ step: makeStep({ id: "b", name: "StepB", description: "Desc B" }), selection: "deselected" }),
-      makeSelectableStep({ step: makeStep({ id: "c", name: "StepC", description: "Desc C" }), selection: "selected" }),
+      makeSelectableStep({ step: makeStep({ id: "alpha-step", name: "StepA", description: "Desc A" }), selection: "selected" }),
+      makeSelectableStep({ step: makeStep({ id: "beta-step", name: "StepB", description: "Desc B" }), selection: "deselected" }),
+      makeSelectableStep({ step: makeStep({ id: "gamma-step", name: "StepC", description: "Desc C" }), selection: "selected" }),
     ];
 
     const expected = [

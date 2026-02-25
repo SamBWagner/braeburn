@@ -16,7 +16,7 @@ function createMockContext(overrides: Partial<{
   return {
     onOutputLine: (line) => { outputLines.push(line); },
     logWriter: async (line) => { logLines.push(line); },
-    runStep: vi.fn(async (cmd: string) => { runStepCommands.push(cmd); }),
+    runStep: vi.fn(async (shellCommand: string) => { runStepCommands.push(shellCommand); }),
     captureOutput: vi.fn(async () => overrides.captureOutputResult ?? ""),
   };
 }
