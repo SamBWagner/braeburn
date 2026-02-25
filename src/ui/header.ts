@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { LOGO_ART } from "../logo.js";
 import type { DisplayStep, StepPhase, CompletedStepRecord, LogoVisibility } from "./state.js";
 import type { TerminalDimensions } from "./outputBox.js";
+import { getActivityIndicatorFrame } from "./activityIndicator.js";
 
 const LOGO_COLUMN_WIDTH = 32;
 const LOGO_SEPARATOR = "    ";
@@ -27,13 +28,12 @@ export function determineLogoLayout(
   return "none";
 }
 
-export function stepTrackerIcon(phase: StepPhase): string {
+export function stepTrackerIcon(phase: StepPhase, activityFrameIndex = 0): string {
   if (phase === "complete")                              return chalk.green("✓ ");
   if (phase === "failed")                               return chalk.red("✗ ");
   if (phase === "skipped" || phase === "not-available") return chalk.dim("– ");
+  if (phase === "running" || phase === "installing")    return chalk.cyan(`${getActivityIndicatorFrame(activityFrameIndex)} `);
   if (
-    phase === "running" ||
-    phase === "installing" ||
     phase === "prompting-to-run" ||
     phase === "prompting-to-install" ||
     phase === "checking-availability"
@@ -72,11 +72,13 @@ type BuildHeaderOptions = {
   currentStepIndex: number;
   currentPhase: StepPhase;
   completedStepRecords: CompletedStepRecord[];
+  activityFrameIndex?: number;
   terminalDimensions?: TerminalDimensions;
 };
 
 export function buildHeaderLines(options: BuildHeaderOptions): string[] {
   const { steps, version, logoVisibility, currentStepIndex, currentPhase, completedStepRecords } = options;
+  const activityFrameIndex = options.activityFrameIndex ?? 0;
 
   const phases = deriveAllStepPhases(steps, currentStepIndex, currentPhase, completedStepRecords);
 
@@ -99,7 +101,7 @@ export function buildHeaderLines(options: BuildHeaderOptions): string[] {
       }
     }
 
-    const icon = stepTrackerIcon(phases[stepIndex]);
+    const icon = stepTrackerIcon(phases[stepIndex], activityFrameIndex);
     const name = isActivePhase(phases[stepIndex]) ? chalk.white(step.name) : chalk.dim(step.name);
     stepLines.push(`${icon}${name}`);
   }

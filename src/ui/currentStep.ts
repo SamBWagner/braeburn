@@ -1,15 +1,18 @@
 import chalk from "chalk";
 import type { DisplayStep, StepPhase } from "./state.js";
+import { getActivityIndicatorFrame } from "./activityIndicator.js";
 
 type ActiveStepOptions = {
   step: DisplayStep;
   stepNumber: number;
   totalSteps: number;
   phase: StepPhase;
+  activityFrameIndex?: number;
 };
 
 export function buildActiveStepLines(options: ActiveStepOptions): string[] {
   const { step, stepNumber, totalSteps, phase } = options;
+  const activityFrameIndex = options.activityFrameIndex ?? 0;
   const isRunning = phase === "running" || phase === "installing";
 
   const lines: string[] = [
@@ -21,7 +24,7 @@ export function buildActiveStepLines(options: ActiveStepOptions): string[] {
 
   if (isRunning) {
     const label = phase === "installing" ? "Installing..." : "Running...";
-    lines.push(`  ${chalk.blue("▶")} ${label}`);
+    lines.push(`  ${chalk.blue(getActivityIndicatorFrame(activityFrameIndex))} ${label}`);
   }
 
   return lines;

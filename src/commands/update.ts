@@ -1,9 +1,9 @@
 import { collectVersions } from "../update/versionCollector.js";
 import { captureYesNo } from "../ui/prompt.js";
-import { buildScreen, createScreenRenderer } from "../ui/screen.js";
+import { buildScreen, buildScreenWithAnimationFrame, createScreenRenderer } from "../ui/screen.js";
 import { hideCursorDuringExecution } from "../ui/terminal.js";
 import { runUpdateEngine, type PromptMode } from "../update/engine.js";
-import type { LogoVisibility } from "../update/state.js";
+import type { LogoVisibility, UpdateState } from "../update/state.js";
 import type { Step } from "../steps/index.js";
 
 type RunUpdateCommandOptions = {
@@ -17,6 +17,24 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
   const renderScreen = createScreenRenderer();
   const restoreCursor = hideCursorDuringExecution({ screenBuffer: "alternate" });
   let finalScreen = "";
+  let latestState: UpdateState | undefined = undefined;
+  let animationFrameIndex = 0;
+  const animationTimer = setInterval(() => {
+    if (!latestState) {
+      return;
+    }
+
+    if (latestState.runCompletion === "finished") {
+      return;
+    }
+
+    if (latestState.currentPhase !== "running" && latestState.currentPhase !== "installing") {
+      return;
+    }
+
+    animationFrameIndex += 1;
+    renderScreen(buildScreenWithAnimationFrame(latestState, animationFrameIndex));
+  }, 100);
 
   try {
     const finalState = await runUpdateEngine({
@@ -27,11 +45,13 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
       askForConfirmation: captureYesNo,
       collectVersions,
       onStateChanged: (state) => {
-        renderScreen(buildScreen(state));
+        latestState = state;
+        renderScreen(buildScreenWithAnimationFrame(state, animationFrameIndex));
       },
     });
     finalScreen = buildScreen(finalState);
   } finally {
+    clearInterval(animationTimer);
     restoreCursor();
   }
 

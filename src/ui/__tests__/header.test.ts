@@ -36,12 +36,16 @@ describe("stepTrackerIcon", () => {
     expect(stripAnsi(stepTrackerIcon("not-available"))).toBe("– ");
   });
 
-  it("returns an arrow for running", () => {
-    expect(stripAnsi(stepTrackerIcon("running"))).toBe("→ ");
+  it("returns an animated indicator for running", () => {
+    expect(stripAnsi(stepTrackerIcon("running"))).toBe("◐ ");
   });
 
-  it("returns an arrow for installing", () => {
-    expect(stripAnsi(stepTrackerIcon("installing"))).toBe("→ ");
+  it("returns an animated indicator for installing", () => {
+    expect(stripAnsi(stepTrackerIcon("installing"))).toBe("◐ ");
+  });
+
+  it("advances running indicator frames", () => {
+    expect(stripAnsi(stepTrackerIcon("running", 1))).toBe("◓ ");
   });
 
   it("returns an arrow for checking-availability", () => {

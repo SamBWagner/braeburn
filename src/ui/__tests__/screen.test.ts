@@ -72,12 +72,12 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
-      "→ Test\n" +
+      "◐ Test\n" +
       "\n" +
       "\n" +
       "  ─── Step 1/1  Test  ────────────────────\n" +
       "  · A test step\n" +
-      "  ▶ Running...\n" +
+      "  ◐ Running...\n" +
       "\n"
     );
   });
@@ -93,12 +93,12 @@ describe("buildScreen", () => {
       "braeburn v1.0.0\n" +
       "macOS system updater\n" +
       "\n" +
-      "→ Test\n" +
+      "◐ Test\n" +
       "\n" +
       "\n" +
       "  ─── Step 1/1  Test  ────────────────────\n" +
       "  · A test step\n" +
-      "  ▶ Running...\n" +
+      "  ◐ Running...\n" +
       "\n" +
       "  ┌─ Test output ────────────────────────────────────────────────────────────┐\n" +
       "  │ updating packages...\n" +

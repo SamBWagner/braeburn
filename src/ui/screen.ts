@@ -17,6 +17,14 @@ export function createScreenRenderer(
 }
 
 export function buildScreen(state: AppState, terminalDimensions?: TerminalDimensions): string {
+  return buildScreenWithAnimationFrame(state, 0, terminalDimensions);
+}
+
+export function buildScreenWithAnimationFrame(
+  state: AppState,
+  activityFrameIndex: number,
+  terminalDimensions?: TerminalDimensions,
+): string {
   const lines: string[] = [];
   const failedStepIds = state.completedStepRecords.flatMap((record, stepIndex) => {
     if (record.phase !== "failed") {
@@ -39,6 +47,7 @@ export function buildScreen(state: AppState, terminalDimensions?: TerminalDimens
       currentStepIndex: state.currentStepIndex,
       currentPhase: state.currentPhase,
       completedStepRecords: state.completedStepRecords,
+      activityFrameIndex,
       terminalDimensions,
     })
   );
@@ -65,6 +74,7 @@ export function buildScreen(state: AppState, terminalDimensions?: TerminalDimens
           stepNumber: state.currentStepIndex + 1,
           totalSteps: state.steps.length,
           phase: state.currentPhase,
+          activityFrameIndex,
         })
       );
 
