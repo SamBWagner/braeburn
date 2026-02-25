@@ -29,7 +29,7 @@ describe("stepTrackerIcon", () => {
   });
 
   it("returns a dash for skipped", () => {
-    expect(stripAnsi(stepTrackerIcon("skipped"))).toBe("– ");
+    expect(stripAnsi(stepTrackerIcon("skipped"))).toBe("↷ ");
   });
 
   it("returns a dash for not-available", () => {

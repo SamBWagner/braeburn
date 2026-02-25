@@ -12,6 +12,7 @@ vi.mock("../runtime.js", () => ({
 }));
 
 import cleanupStep from "../cleanup.js";
+import braeburnStep from "../braeburn.js";
 import dotnetStep from "../dotnet.js";
 import homebrewStep from "../homebrew.js";
 import masStep from "../mas.js";
@@ -41,6 +42,12 @@ const commandBackedStepSpecs: CommandBackedStepSpec[] = [
     step: npmStep,
     availabilityCommand: "npm",
     runShellCommand: "npm update -g",
+  },
+  {
+    stepId: braeburnStep.id,
+    step: braeburnStep,
+    availabilityCommand: "npm",
+    runShellCommand: "npm install -g braeburn@latest",
   },
   {
     stepId: pipStep.id,

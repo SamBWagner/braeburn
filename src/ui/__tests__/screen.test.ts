@@ -129,7 +129,7 @@ describe("buildScreen", () => {
       "  ─── Step 1/1  Test  ────────────────────\n" +
       "  · A test step\n" +
       "\n" +
-      "  ?  Run this update? [Y/n/f]\n" +
+      "  ?  Run this update? [Y/n/s/f]\n" +
       "\n"
     );
   });

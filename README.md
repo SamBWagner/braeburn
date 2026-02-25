@@ -42,6 +42,7 @@ Steps are grouped by system capability. For new setups, braeburn uses a conserva
 | `mas` | Apps & Packages | off | `mas` |
 | `macos` | Apps & Packages | off | — |
 | `npm` | CLI Tools | on | `npm` |
+| `braeburn` | CLI Tools | on | `npm` |
 | `pip` | CLI Tools | on | `pip3` |
 | `dotnet` | CLI Tools | on | `dotnet` |
 | `ohmyzsh` | Shell | off | `~/.oh-my-zsh` |

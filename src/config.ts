@@ -8,7 +8,7 @@ export const PROTECTED_STEP_IDS = new Set(["homebrew"]);
 export type ConfigDefaultsProfile = "legacy" | "conservative-v2";
 
 export const LEGACY_DEFAULT_OFF_STEP_IDS = new Set(["nvm", "pyenv"]);
-export const CONSERVATIVE_DEFAULT_ON_STEP_IDS = new Set(["homebrew", "npm", "pip", "dotnet"]);
+export const CONSERVATIVE_DEFAULT_ON_STEP_IDS = new Set(["homebrew", "npm", "braeburn", "pip", "dotnet"]);
 
 export type BraeburnConfig = {
   // Exception to the no-boolean-parameters rule: persisted config stores explicit on/off flags.

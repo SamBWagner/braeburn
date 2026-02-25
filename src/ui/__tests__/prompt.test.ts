@@ -4,11 +4,11 @@ import { stripAnsi } from "../../__tests__/helpers.js";
 import type { CurrentPrompt } from "../state.js";
 
 describe("buildPromptLines", () => {
-  it("renders a question with the Y/n/f hint", () => {
+  it("renders a question with the Y/n/s/f hint", () => {
     const prompt: CurrentPrompt = { question: "Run Homebrew update?" };
     const lines = buildPromptLines(prompt);
     expect(lines.map(stripAnsi)).toEqual([
-      "  ?  Run Homebrew update? [Y/n/f]",
+      "  ?  Run Homebrew update? [Y/n/s/f]",
     ]);
   });
 
@@ -21,7 +21,7 @@ describe("buildPromptLines", () => {
     expect(lines.map(stripAnsi)).toEqual([
       "  ⚠  This may break things.",
       "",
-      "  ?  Run pip update? [Y/n/f]",
+      "  ?  Run pip update? [Y/n/s/f]",
     ]);
   });
 
@@ -29,7 +29,7 @@ describe("buildPromptLines", () => {
     const prompt: CurrentPrompt = { question: "Continue?" };
     const lines = buildPromptLines(prompt);
     expect(lines.map(stripAnsi)).toEqual([
-      "  ?  Continue? [Y/n/f]",
+      "  ?  Continue? [Y/n/s/f]",
     ]);
   });
 });

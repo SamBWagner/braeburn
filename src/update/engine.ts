@@ -10,7 +10,7 @@ import {
 } from "./state.js";
 
 export type PromptMode = "interactive" | "auto-accept";
-export type ConfirmationAnswer = "yes" | "no" | "force";
+export type ConfirmationAnswer = "yes" | "no" | "skip" | "force";
 
 type UpdateEngineDependencies = {
   createLogWriter: (stepId: string) => Promise<StepLogWriter>;
@@ -56,7 +56,7 @@ async function resolvePrompt(
 
   const answer = await askForConfirmation();
 
-  if (answer === "no") {
+  if (answer === "no" || answer === "skip") {
     return { promptMode: "interactive", decision: "skip" };
   }
 

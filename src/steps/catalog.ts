@@ -9,6 +9,7 @@ import {
   dotnetStep,
   macosStep,
   cleanupStep,
+  braeburnStep,
   type Step,
 } from "./index.js";
 
@@ -23,6 +24,7 @@ const STEP_BY_ID: Record<string, Step> = {
   dotnet: dotnetStep,
   ohmyzsh: ohmyzshStep,
   cleanup: cleanupStep,
+  braeburn: braeburnStep,
 };
 
 const STEP_EXECUTION_ORDER: string[] = [
@@ -32,6 +34,7 @@ const STEP_EXECUTION_ORDER: string[] = [
   "mas",
   "macos",
   "npm",
+  "braeburn",
   "pip",
   "dotnet",
   "ohmyzsh",

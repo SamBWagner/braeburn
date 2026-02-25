@@ -63,6 +63,7 @@ Step descriptions:
 
   System / CLI Tools:
   npm        Update global npm packages  (requires: npm)
+  braeburn   Update braeburn CLI itself  (requires: npm)
   pip        Update global pip3 packages (requires: pip3) ⚠ may be fragile
   dotnet     Update .NET global tools    (requires: dotnet)
 
@@ -119,6 +120,7 @@ program
   .option("--mas", "Show latest Mac App Store log")
   .option("--ohmyzsh", "Show latest Oh My Zsh log")
   .option("--npm", "Show latest npm log")
+  .option("--braeburn", "Show latest braeburn log")
   .option("--pip", "Show latest pip3 log")
   .option("--pyenv", "Show latest pyenv log")
   .option("--nvm", "Show latest nvm log")

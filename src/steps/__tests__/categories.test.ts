@@ -32,6 +32,7 @@ describe("step categories", () => {
       "mas",
       "macos",
       "npm",
+      "braeburn",
       "pip",
       "dotnet",
       "ohmyzsh",

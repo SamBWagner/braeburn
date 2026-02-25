@@ -32,7 +32,8 @@ export function determineLogoLayout(
 export function stepTrackerIcon(phase: StepPhase, activityFrameIndex = 0): string {
   if (phase === "complete")                              return chalk.green("✓ ");
   if (phase === "failed")                               return chalk.red("✗ ");
-  if (phase === "skipped" || phase === "not-available") return chalk.dim("– ");
+  if (phase === "skipped")                              return chalk.yellow("↷ ");
+  if (phase === "not-available")                        return chalk.dim("– ");
   if (phase === "running" || phase === "installing")    return chalk.cyan(`${getActivityIndicatorFrame(activityFrameIndex)} `);
   if (
     phase === "prompting-to-run" ||
