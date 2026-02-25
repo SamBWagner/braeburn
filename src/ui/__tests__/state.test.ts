@@ -1,15 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { createInitialAppState } from "../state.js";
-import type { Step } from "../../steps/index.js";
+import type { DisplayStep } from "../state.js";
 
-function makeStep(overrides: Partial<Step> = {}): Step {
+function makeStep(overrides: Partial<DisplayStep> = {}): DisplayStep {
   return {
     id: "test",
     name: "Test",
     description: "A test step",
     stage: "tools",
-    checkIsAvailable: async () => true,
-    run: async () => {},
     ...overrides,
   };
 }

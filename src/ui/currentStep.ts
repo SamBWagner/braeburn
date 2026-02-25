@@ -1,9 +1,8 @@
 import chalk from "chalk";
-import type { Step } from "../steps/index.js";
-import type { StepPhase } from "./state.js";
+import type { DisplayStep, StepPhase } from "./state.js";
 
 type ActiveStepOptions = {
-  step: Step;
+  step: DisplayStep;
   stepNumber: number;
   totalSteps: number;
   phase: StepPhase;

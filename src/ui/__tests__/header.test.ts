@@ -7,17 +7,14 @@ import {
   determineLogoLayout,
 } from "../header.js";
 import { stripAnsi } from "../../__tests__/helpers.js";
-import type { Step } from "../../steps/index.js";
-import type { StepPhase, CompletedStepRecord } from "../state.js";
+import type { DisplayStep, StepPhase, CompletedStepRecord } from "../state.js";
 
-function makeStep(overrides: Partial<Step> = {}): Step {
+function makeStep(overrides: Partial<DisplayStep> = {}): DisplayStep {
   return {
     id: "test",
     name: "Test",
     description: "A test step",
     stage: "tools",
-    checkIsAvailable: async () => true,
-    run: async () => {},
     ...overrides,
   };
 }

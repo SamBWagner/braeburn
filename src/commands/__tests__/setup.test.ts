@@ -2,19 +2,17 @@ import { describe, it, expect } from "vitest";
 import {
   buildLoadingScreen,
   buildSetupScreen,
+  type SetupStepView,
   type SelectableStep,
 } from "../setup.js";
-import type { Step } from "../../steps/index.js";
 import { stripAnsi } from "../../__tests__/helpers.js";
 
-function makeStep(overrides: Partial<Step> = {}): Step {
+function makeStep(overrides: Partial<SetupStepView> = {}): SetupStepView {
   return {
     id: "test-step",
     name: "Test Step",
     description: "A test step",
     stage: "tools",
-    checkIsAvailable: async () => true,
-    run: async () => { },
     ...overrides,
   };
 }

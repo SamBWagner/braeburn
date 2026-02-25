@@ -5,13 +5,22 @@ import { LOGO_ART } from "../logo.js";
 import { createScreenRenderer } from "../ui/screen.js";
 import { hideCursorDuringExecution } from "../ui/terminal.js";
 import type { Step } from "../steps/index.js";
+import type { StepStage } from "../update/state.js";
 
 export type SelectionState = "selected" | "deselected";
 export type ProtectionStatus = "protected" | "configurable";
 export type AvailabilityStatus = "available" | "unavailable";
 
+export type SetupStepView = {
+  id: string;
+  name: string;
+  description: string;
+  stage: StepStage;
+  brewPackageToInstall?: string;
+};
+
 export type SelectableStep = {
-  step: Step;
+  step: SetupStepView;
   selection: SelectionState;
   protection: ProtectionStatus;
   availability: AvailabilityStatus;
@@ -100,74 +109,83 @@ export function buildSetupScreen(items: SelectableStep[], cursorIndex: number): 
 
 export async function runSetupCommand(allSteps: Step[]): Promise<void> {
   const render = createScreenRenderer();
+  const restoreCursor = hideCursorDuringExecution({ screenBuffer: "alternate" });
 
-  hideCursorDuringExecution();
+  try {
+    render(buildLoadingScreen());
 
-  render(buildLoadingScreen());
+    const availabilityResults = await Promise.all(
+      allSteps.map((step) => step.checkIsAvailable())
+    );
 
-  const availabilityResults = await Promise.all(
-    allSteps.map((step) => step.checkIsAvailable())
-  );
+    const items: SelectableStep[] = allSteps.map((step, stepIndex) => ({
+      step: {
+        id: step.id,
+        name: step.name,
+        description: step.description,
+        stage: step.stage,
+        brewPackageToInstall: step.brewPackageToInstall,
+      },
+      selection: PROTECTED_STEP_IDS.has(step.id) || step.stage === "tools" ? "selected" : "deselected",
+      protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
+      availability: availabilityResults[stepIndex] ? "available" : "unavailable",
+    }));
 
-  const items: SelectableStep[] = allSteps.map((step, stepIndex) => ({
-    step,
-    selection: PROTECTED_STEP_IDS.has(step.id) || step.stage === "tools" ? "selected" : "deselected",
-    protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
-    availability: availabilityResults[stepIndex] ? "available" : "unavailable",
-  }));
+    let cursorIndex = 0;
 
-  let cursorIndex = 0;
+    render(buildSetupScreen(items, cursorIndex));
 
-  render(buildSetupScreen(items, cursorIndex));
+    await new Promise<void>((resolve) => {
+      readline.emitKeypressEvents(process.stdin);
+      if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
-  await new Promise<void>((resolve) => {
-    readline.emitKeypressEvents(process.stdin);
-    if (process.stdin.isTTY) process.stdin.setRawMode(true);
-
-    const handleKeypress = (_char: string, key: KeypressKey) => {
-      if (key?.ctrl && key?.name === "c") {
-        process.exit(130);
-      }
-
-      if (key?.name === "up" || key?.name === "k") {
-        cursorIndex = Math.max(0, cursorIndex - 1);
-        render(buildSetupScreen(items, cursorIndex));
-      } else if (key?.name === "down" || key?.name === "j") {
-        cursorIndex = Math.min(items.length - 1, cursorIndex + 1);
-        render(buildSetupScreen(items, cursorIndex));
-      } else if (key?.name === "space") {
-        const item = items[cursorIndex];
-        if (item.protection === "configurable") {
-          item.selection = item.selection === "selected" ? "deselected" : "selected";
-          render(buildSetupScreen(items, cursorIndex));
+      const handleKeypress = (_char: string, key: KeypressKey) => {
+        if (key?.ctrl && key?.name === "c") {
+          process.exit(130);
         }
-      } else if (key?.name === "return") {
-        process.stdin.removeListener("keypress", handleKeypress);
-        if (process.stdin.isTTY) process.stdin.setRawMode(false);
-        process.stdin.pause();
-        resolve();
+
+        if (key?.name === "up" || key?.name === "k") {
+          cursorIndex = Math.max(0, cursorIndex - 1);
+          render(buildSetupScreen(items, cursorIndex));
+        } else if (key?.name === "down" || key?.name === "j") {
+          cursorIndex = Math.min(items.length - 1, cursorIndex + 1);
+          render(buildSetupScreen(items, cursorIndex));
+        } else if (key?.name === "space") {
+          const item = items[cursorIndex];
+          if (item.protection === "configurable") {
+            item.selection = item.selection === "selected" ? "deselected" : "selected";
+            render(buildSetupScreen(items, cursorIndex));
+          }
+        } else if (key?.name === "return") {
+          process.stdin.removeListener("keypress", handleKeypress);
+          if (process.stdin.isTTY) process.stdin.setRawMode(false);
+          process.stdin.pause();
+          resolve();
+        }
+      };
+
+      process.stdin.on("keypress", handleKeypress);
+      process.stdin.resume();
+    });
+
+    const stepsConfig: Record<string, boolean> = {};
+    for (const item of items) {
+      if (item.protection === "configurable" && item.selection === "deselected") {
+        stepsConfig[item.step.id] = false;
       }
-    };
-
-    process.stdin.on("keypress", handleKeypress);
-    process.stdin.resume();
-  });
-
-  const stepsConfig: Record<string, boolean> = {};
-  for (const item of items) {
-    if (item.protection === "configurable" && item.selection === "deselected") {
-      stepsConfig[item.step.id] = false;
     }
+    await writeConfig({ steps: stepsConfig });
+
+    const confirmationLines = [
+      chalk.yellow(LOGO_ART),
+      "",
+      `  ${chalk.green("\u2713")}  Setup complete! Starting your first update\u2026`,
+      "",
+    ];
+    render(confirmationLines.join("\n") + "\n");
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+  } finally {
+    restoreCursor();
   }
-  await writeConfig({ steps: stepsConfig });
-
-  const confirmationLines = [
-    chalk.yellow(LOGO_ART),
-    "",
-    `  ${chalk.green("\u2713")}  Setup complete! Starting your first update\u2026`,
-    "",
-  ];
-  render(confirmationLines.join("\n") + "\n");
-
-  await new Promise((resolve) => setTimeout(resolve, 800));
 }

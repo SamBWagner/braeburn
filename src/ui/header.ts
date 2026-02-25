@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import { LOGO_ART } from "../logo.js";
-import type { Step } from "../steps/index.js";
-import type { StepPhase, CompletedStepRecord, LogoVisibility } from "./state.js";
+import type { DisplayStep, StepPhase, CompletedStepRecord, LogoVisibility } from "./state.js";
 import type { TerminalDimensions } from "./outputBox.js";
 
 const LOGO_COLUMN_WIDTH = 32;
@@ -54,7 +53,7 @@ export function isActivePhase(phase: StepPhase): boolean {
 }
 
 export function deriveAllStepPhases(
-  steps: Step[],
+  steps: DisplayStep[],
   currentStepIndex: number,
   currentPhase: StepPhase,
   completedStepRecords: CompletedStepRecord[]
@@ -67,7 +66,7 @@ export function deriveAllStepPhases(
 }
 
 type BuildHeaderOptions = {
-  steps: Step[];
+  steps: DisplayStep[];
   version: string;
   logoVisibility: LogoVisibility;
   currentStepIndex: number;

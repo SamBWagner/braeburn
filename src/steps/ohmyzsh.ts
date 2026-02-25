@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { checkPathExists, type Step, type StepRunContext } from "./index.js";
+import { checkPathExists } from "./runtime.js";
+import type { Step, StepRunContext } from "./types.js";
 
 const OH_MY_ZSH_UPGRADE_SCRIPT_PATH = join(
   homedir(),

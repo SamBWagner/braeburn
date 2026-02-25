@@ -1,8 +1,7 @@
 import {
   checkCommandExists,
-  type Step,
-  type StepRunContext,
-} from "./index.js";
+} from "./runtime.js";
+import type { Step, StepRunContext } from "./types.js";
 
 const FIND_LATEST_STABLE_PYTHON_SHELL_COMMAND =
   "pyenv install -l | grep -E '^\\s+3\\.[0-9]+\\.[0-9]+$' | grep -vE 'dev|a[0-9]|b[0-9]|rc[0-9]' | tail -1 | tr -d ' '";

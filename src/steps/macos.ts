@@ -1,7 +1,7 @@
 import {
   type Step,
   type StepRunContext,
-} from "./index.js";
+} from "./types.js";
 
 const macosStep: Step = {
   id: "macos",

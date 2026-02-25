@@ -10,14 +10,15 @@ export type ScreenRenderer = (content: string) => void;
 export function createScreenRenderer(
   output: NodeJS.WritableStream = process.stdout,
 ): ScreenRenderer {
-  let previousLineCount = 0;
+  let hasAnchor = false;
 
   return (content: string): void => {
-    if (previousLineCount > 0) {
-      output.write(`\x1b[${previousLineCount}A\x1b[J`);
+    if (!hasAnchor) {
+      output.write("\x1b7");
+      hasAnchor = true;
     }
+    output.write("\x1b8\x1b[J");
     output.write(content);
-    previousLineCount = (content.match(/\n/g) ?? []).length;
   };
 }
 

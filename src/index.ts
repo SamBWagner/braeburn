@@ -3,37 +3,13 @@ import { Command } from "commander";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import {
-  homebrewStep,
-  masStep,
-  ohmyzshStep,
-  npmStep,
-  pipStep,
-  pyenvStep,
-  nvmStep,
-  dotnetStep,
-  macosStep,
-  cleanupStep,
-  type Step,
-} from "./steps/index.js";
+import { ALL_STEPS } from "./steps/catalog.js";
+import type { Step } from "./steps/index.js";
 import { runUpdateCommand } from "./commands/update.js";
 import { runLogCommand, runLogListCommand } from "./commands/log.js";
 import { runConfigCommand, runConfigUpdateCommand } from "./commands/config.js";
 import { runSetupCommand } from "./commands/setup.js";
 import { readConfig, isStepEnabled, isLogoEnabled, PROTECTED_STEP_IDS, configFileExists } from "./config.js";
-
-const ALL_STEPS: Step[] = [
-  pyenvStep,
-  nvmStep,
-  homebrewStep,
-  masStep,
-  ohmyzshStep,
-  npmStep,
-  pipStep,
-  dotnetStep,
-  macosStep,
-  cleanupStep,
-];
 
 const STEP_IDS_BY_NAME = new Map<string, Step>(
   ALL_STEPS.map((step) => [step.id, step])

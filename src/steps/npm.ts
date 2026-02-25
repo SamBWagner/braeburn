@@ -1,4 +1,5 @@
-import { checkCommandExists, type Step, type StepRunContext } from "./index.js";
+import { checkCommandExists } from "./runtime.js";
+import type { Step, StepRunContext } from "./types.js";
 
 const npmStep: Step = {
   id: "npm",

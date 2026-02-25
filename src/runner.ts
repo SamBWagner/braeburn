@@ -20,7 +20,7 @@ export async function runShellCommand(
   });
 
   subprocess.stdout?.on("data", (chunk: unknown) => {
-    const lines = String(chunk).split("\n").filter(Boolean);
+    const lines = String(chunk).split(/\r?\n|\r/).filter(Boolean);
     for (const line of lines) {
       options.onOutputLine({ text: line, source: "stdout" });
       options.logWriter(line);
@@ -28,7 +28,7 @@ export async function runShellCommand(
   });
 
   subprocess.stderr?.on("data", (chunk: unknown) => {
-    const lines = String(chunk).split("\n").filter(Boolean);
+    const lines = String(chunk).split(/\r?\n|\r/).filter(Boolean);
     for (const line of lines) {
       options.onOutputLine({ text: line, source: "stderr" });
       options.logWriter(line);
