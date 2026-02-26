@@ -23,7 +23,9 @@ export function buildActiveStepLines(options: ActiveStepOptions): string[] {
   ];
 
   if (isRunning) {
-    const label = phase === "installing" ? "Installing..." : "Running...";
+    const label = phase === "installing"
+      ? "Installing... press q to end this step"
+      : "Running... press q to end this step";
     lines.push(`  ${chalk.blue(getActivityIndicatorFrame(activityFrameIndex))} ${label}`);
   }
 

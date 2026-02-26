@@ -3,6 +3,8 @@ import {
   doesShellCommandSucceed,
   captureShellCommandOutput,
   runShellCommand,
+  cancelActiveShellCommand,
+  ShellCommandCanceledError,
   type CommandOutputLine,
 } from "../runner.js";
 
@@ -57,6 +59,10 @@ describe("captureShellCommandOutput", () => {
 });
 
 describe("runShellCommand", () => {
+  it("returns false when no command is active to cancel", () => {
+    expect(cancelActiveShellCommand()).toBe(false);
+  });
+
   it("calls onOutputLine with stdout data", async () => {
     const lines: CommandOutputLine[] = [];
     const logLines: string[] = [];
@@ -139,5 +145,28 @@ describe("runShellCommand", () => {
     expect(logLines).toContain("  err-before-fail");
     expect(logLines).toContain("[braeburn] stdout tail (1):");
     expect(logLines).toContain("  out-before-fail");
+  });
+
+  it("cancels the active command when requested", async () => {
+    const logLines: string[] = [];
+    const cancelTimer = setTimeout(() => {
+      cancelActiveShellCommand();
+    }, 50);
+
+    try {
+      await expect(
+        runShellCommand({
+          shellCommand: "sleep 5",
+          onOutputLine: () => {},
+          logWriter: async (line) => {
+            logLines.push(line);
+          },
+        })
+      ).rejects.toBeInstanceOf(ShellCommandCanceledError);
+    } finally {
+      clearTimeout(cancelTimer);
+    }
+
+    expect(logLines).toContain("[braeburn] Command canceled by user input (q).");
   });
 });

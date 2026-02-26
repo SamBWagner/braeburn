@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { runUpdateEngine, type ConfirmationAnswer } from "../engine.js";
 import type { Step, StepRunContext } from "../../steps/index.js";
 import type { CommandOutputLine } from "../../runner.js";
+import { ShellCommandCanceledError } from "../../runner.js";
 
 function makeStep(overrides: Partial<Step> = {}): Step {
   return {
@@ -178,6 +179,45 @@ describe("runUpdateEngine", () => {
     expect(shellCommands).toEqual(["step-one", "step-two"]);
     expect(result.completedStepRecords).toEqual([
       { phase: "complete", summaryNote: "updated" },
+      { phase: "complete", summaryNote: "updated" },
+    ]);
+  });
+
+  it("returns to interactive prompts after a user-canceled step", async () => {
+    const { dependencies } = createEngineDependencies();
+    const answers: ConfirmationAnswer[] = ["force", "yes"];
+    let answerIndex = 0;
+
+    const canceledStepRun = vi.fn(async () => {
+      throw new ShellCommandCanceledError("step-one", new Error("SIGTERM"));
+    });
+    const stepTwoRun = vi.fn(async (context: StepRunContext) => {
+      await context.runStep("step-two");
+    });
+
+    const result = await runUpdateEngine({
+      steps: [
+        makeStep({ id: "one", name: "One", run: canceledStepRun }),
+        makeStep({ id: "two", name: "Two", run: stepTwoRun }),
+      ],
+      promptMode: "interactive",
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      askForConfirmation: async () => {
+        const answer = answers[answerIndex] ?? "yes";
+        answerIndex += 1;
+        return answer;
+      },
+      collectVersions: async () => [],
+      onStateChanged: () => {},
+      dependencies,
+    });
+
+    expect(answerIndex).toBe(2);
+    expect(canceledStepRun).toHaveBeenCalledOnce();
+    expect(stepTwoRun).toHaveBeenCalledOnce();
+    expect(result.completedStepRecords).toEqual([
+      { phase: "failed", summaryNote: "canceled by user" },
       { phase: "complete", summaryNote: "updated" },
     ]);
   });

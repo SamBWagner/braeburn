@@ -1,5 +1,5 @@
 import { createLogWriterForStep, type StepLogWriter } from "../logger.js";
-import { runShellCommand } from "../runner.js";
+import { runShellCommand, ShellCommandCanceledError } from "../runner.js";
 import { createDefaultStepRunContext, type Step } from "../steps/index.js";
 import { toDisplaySteps } from "./displayStep.js";
 import {
@@ -74,6 +74,10 @@ function reportState(
   onStateChanged(state);
 }
 
+function wasStepCanceledByUser(error: unknown): boolean {
+  return error instanceof ShellCommandCanceledError;
+}
+
 export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<UpdateState> {
   const dependencies = resolveDependencies(options.dependencies);
   const state = createInitialUpdateState(
@@ -136,10 +140,17 @@ export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<
           },
           logWriter: installLogWriter,
         });
-      } catch {
+      } catch (error) {
+        if (wasStepCanceledByUser(error)) {
+          promptMode = "interactive";
+        }
+
         state.currentPhase = "failed";
         reportState(state, options.onStateChanged);
-        state.completedStepRecords.push({ phase: "failed", summaryNote: "install failed" });
+        state.completedStepRecords.push({
+          phase: "failed",
+          summaryNote: wasStepCanceledByUser(error) ? "canceled by user" : "install failed",
+        });
         continue;
       }
     }
@@ -180,11 +191,18 @@ export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<
       reportState(state, options.onStateChanged);
       state.completedStepRecords.push({ phase: "complete", summaryNote: "updated" });
     } catch (error) {
+      if (wasStepCanceledByUser(error)) {
+        promptMode = "interactive";
+      }
+
       const errorMessage = error instanceof Error ? error.message : String(error);
       state.currentPhase = "failed";
       state.currentOutputLines = [];
       reportState(state, options.onStateChanged);
-      state.completedStepRecords.push({ phase: "failed", summaryNote: errorMessage });
+      state.completedStepRecords.push({
+        phase: "failed",
+        summaryNote: wasStepCanceledByUser(error) ? "canceled by user" : errorMessage,
+      });
     }
   }
 

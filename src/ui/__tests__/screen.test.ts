@@ -80,7 +80,7 @@ describe("buildScreen", () => {
       "\n" +
       "  ─── Step 1/1  Test  ────────────────────\n" +
       "  · A test step\n" +
-      "  ◐ Running...\n" +
+      "  ◐ Running... press q to end this step\n" +
       "\n"
     );
   });
@@ -102,7 +102,7 @@ describe("buildScreen", () => {
       "\n" +
       "  ─── Step 1/1  Test  ────────────────────\n" +
       "  · A test step\n" +
-      "  ◐ Running...\n" +
+      "  ◐ Running... press q to end this step\n" +
       "\n" +
       "  ┌─ Test output ────────────────────────────────────────────────────────────┐\n" +
       "  │ updating packages...\n" +

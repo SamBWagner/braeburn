@@ -11,7 +11,33 @@ type RunCommandOptions = {
   logWriter: StepLogWriter;
 };
 
+type ShellCommandSubprocess = ReturnType<typeof execa>;
+
 const FAILURE_OUTPUT_TAIL_LINE_LIMIT = 20;
+let activeShellCommandSubprocess: ShellCommandSubprocess | undefined;
+const userCanceledSubprocesses = new WeakSet<ShellCommandSubprocess>();
+
+export class ShellCommandCanceledError extends Error {
+  readonly shellCommand: string;
+  readonly originalError: unknown;
+
+  constructor(shellCommand: string, originalError: unknown) {
+    super(`Command canceled by user: ${shellCommand}`);
+    this.name = "ShellCommandCanceledError";
+    this.shellCommand = shellCommand;
+    this.originalError = originalError;
+  }
+}
+
+export function cancelActiveShellCommand(): boolean {
+  if (!activeShellCommandSubprocess) {
+    return false;
+  }
+
+  userCanceledSubprocesses.add(activeShellCommandSubprocess);
+  activeShellCommandSubprocess.kill("SIGTERM");
+  return true;
+}
 
 function splitNonEmptyLines(text: string | undefined): string[] {
   if (!text) {
@@ -80,6 +106,7 @@ export async function runShellCommand(
     all: true,
     reject: true,
   });
+  activeShellCommandSubprocess = subprocess;
 
   subprocess.stdout?.on("data", (chunk: unknown) => {
     const lines = String(chunk).split(/\r?\n|\r/).filter(Boolean);
@@ -100,11 +127,25 @@ export async function runShellCommand(
   try {
     await subprocess;
   } catch (error) {
+    const commandWasCanceledByUser = userCanceledSubprocesses.has(subprocess);
     const failureSummaryLines = buildFailureSummaryLines(options.shellCommand, error);
+    if (commandWasCanceledByUser) {
+      failureSummaryLines.push("[braeburn] Command canceled by user input (q).");
+    }
+
     for (const line of failureSummaryLines) {
       await options.logWriter(line);
     }
+
+    if (commandWasCanceledByUser) {
+      throw new ShellCommandCanceledError(options.shellCommand, error);
+    }
+
     throw error;
+  } finally {
+    if (activeShellCommandSubprocess === subprocess) {
+      activeShellCommandSubprocess = undefined;
+    }
   }
 }
 

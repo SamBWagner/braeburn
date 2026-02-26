@@ -24,7 +24,7 @@ describe("buildActiveStepLines", () => {
     expect(lines.map(stripAnsi)).toEqual([
       "  ─── Step 1/5  Homebrew  ────────────────────",
       "  · Update Homebrew and installed packages",
-      "  ◐ Running...",
+      "  ◐ Running... press q to end this step",
     ]);
   });
 
@@ -38,7 +38,7 @@ describe("buildActiveStepLines", () => {
     expect(lines.map(stripAnsi)).toEqual([
       "  ─── Step 3/10  Test Step  ────────────────────",
       "  · A step for testing",
-      "  ◐ Running...",
+      "  ◐ Running... press q to end this step",
     ]);
   });
 
@@ -52,7 +52,7 @@ describe("buildActiveStepLines", () => {
     expect(lines.map(stripAnsi)).toEqual([
       "  ─── Step 1/1  Test Step  ────────────────────",
       "  · A step for testing",
-      "  ◐ Installing...",
+      "  ◐ Installing... press q to end this step",
     ]);
   });
 
