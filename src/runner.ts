@@ -11,11 +11,20 @@ type RunCommandOptions = {
   logWriter: StepLogWriter;
 };
 
+type ShellCommandExecutionResult = {
+  capturedOutput: string;
+};
+
 type ShellCommandSubprocess = ReturnType<typeof execa>;
 
 const FAILURE_OUTPUT_TAIL_LINE_LIMIT = 20;
 let activeShellCommandSubprocess: ShellCommandSubprocess | undefined;
 const userCanceledSubprocesses = new WeakSet<ShellCommandSubprocess>();
+
+type BufferedLineEmitter = {
+  appendChunk: (chunk: unknown) => void;
+  flushPendingLine: () => void;
+};
 
 export class ShellCommandCanceledError extends Error {
   readonly shellCommand: string;
@@ -99,34 +108,77 @@ function buildFailureSummaryLines(
   return summaryLines;
 }
 
-export async function runShellCommand(
-  options: RunCommandOptions
-): Promise<void> {
+function createBufferedLineEmitter(
+  emitLine: (line: string) => void,
+): BufferedLineEmitter {
+  let pendingText = "";
+
+  return {
+    appendChunk(chunk: unknown): void {
+      pendingText += String(chunk);
+      const lineParts = pendingText.split(/\r?\n|\r/);
+      pendingText = lineParts.pop() ?? "";
+
+      for (const linePart of lineParts) {
+        if (linePart.length === 0) {
+          continue;
+        }
+
+        emitLine(linePart);
+      }
+    },
+
+    flushPendingLine(): void {
+      if (pendingText.length === 0) {
+        return;
+      }
+
+      emitLine(pendingText);
+      pendingText = "";
+    },
+  };
+}
+
+async function executeShellCommand(
+  options: RunCommandOptions,
+): Promise<ShellCommandExecutionResult> {
+  const capturedOutputLines: string[] = [];
   const subprocess = execa("bash", ["-c", options.shellCommand], {
     all: true,
     reject: true,
   });
   activeShellCommandSubprocess = subprocess;
 
+  const emitOutputLine = (line: CommandOutputLine): void => {
+    capturedOutputLines.push(line.text);
+    options.onOutputLine(line);
+    options.logWriter(line.text);
+  };
+
+  const stdoutEmitter = createBufferedLineEmitter((line) => {
+    emitOutputLine({ text: line, source: "stdout" });
+  });
+  const stderrEmitter = createBufferedLineEmitter((line) => {
+    emitOutputLine({ text: line, source: "stderr" });
+  });
+
   subprocess.stdout?.on("data", (chunk: unknown) => {
-    const lines = String(chunk).split(/\r?\n|\r/).filter(Boolean);
-    for (const line of lines) {
-      options.onOutputLine({ text: line, source: "stdout" });
-      options.logWriter(line);
-    }
+    stdoutEmitter.appendChunk(chunk);
   });
 
   subprocess.stderr?.on("data", (chunk: unknown) => {
-    const lines = String(chunk).split(/\r?\n|\r/).filter(Boolean);
-    for (const line of lines) {
-      options.onOutputLine({ text: line, source: "stderr" });
-      options.logWriter(line);
-    }
+    stderrEmitter.appendChunk(chunk);
   });
 
   try {
     await subprocess;
+    stdoutEmitter.flushPendingLine();
+    stderrEmitter.flushPendingLine();
+    return { capturedOutput: capturedOutputLines.join("\n") };
   } catch (error) {
+    stdoutEmitter.flushPendingLine();
+    stderrEmitter.flushPendingLine();
+
     const commandWasCanceledByUser = userCanceledSubprocesses.has(subprocess);
     const failureSummaryLines = buildFailureSummaryLines(options.shellCommand, error);
     if (commandWasCanceledByUser) {
@@ -147,6 +199,19 @@ export async function runShellCommand(
       activeShellCommandSubprocess = undefined;
     }
   }
+}
+
+export async function runShellCommand(
+  options: RunCommandOptions
+): Promise<void> {
+  await executeShellCommand(options);
+}
+
+export async function runShellCommandAndCaptureOutput(
+  options: RunCommandOptions,
+): Promise<string> {
+  const result = await executeShellCommand(options);
+  return result.capturedOutput;
 }
 
 type CheckCommandOptions = {

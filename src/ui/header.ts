@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { LOGO_ART } from "../logo.js";
 import { buildCategorySectionsInOrder, getStepCategoryLabel } from "../steps/index.js";
 import type { DisplayStep, StepPhase, CompletedStepRecord, LogoVisibility } from "./state.js";
-import type { TerminalDimensions } from "./outputBox.js";
+import type { TerminalDimensions } from "./outputLines.js";
 import { getActivityIndicatorFrame } from "./activityIndicator.js";
 
 const LOGO_COLUMN_WIDTH = 32;

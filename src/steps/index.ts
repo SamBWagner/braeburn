@@ -21,6 +21,7 @@ export {
   checkCommandExists,
   checkPathExists,
   runStep,
+  runStepAndCaptureOutput,
   createDefaultStepRunContext,
 } from "./runtime.js";
 

@@ -5,19 +5,26 @@ import macosStep from "../macos.js";
 
 function createMockContext(overrides: Partial<{
   runStepCommands: string[];
-  captureOutputResult: string;
+  checkOutputLines: string[];
+  runStepAndCaptureOutputResult: string;
   outputLines: CommandOutputLine[];
-  logLines: string[];
 }> = {}): StepRunContext {
   const runStepCommands = overrides.runStepCommands ?? [];
+  const checkOutputLines = overrides.checkOutputLines ?? [];
   const outputLines = overrides.outputLines ?? [];
-  const logLines = overrides.logLines ?? [];
 
   return {
     onOutputLine: (line) => { outputLines.push(line); },
-    logWriter: async (line) => { logLines.push(line); },
+    logWriter: async () => {},
     runStep: vi.fn(async (shellCommand: string) => { runStepCommands.push(shellCommand); }),
-    captureOutput: vi.fn(async () => overrides.captureOutputResult ?? ""),
+    runStepAndCaptureOutput: vi.fn(async (shellCommand: string) => {
+      for (const line of checkOutputLines) {
+        outputLines.push({ text: line, source: "stdout" });
+      }
+
+      return overrides.runStepAndCaptureOutputResult ?? "";
+    }),
+    captureOutput: vi.fn(async () => ""),
   };
 }
 
@@ -34,38 +41,50 @@ describe("macosStep", () => {
   describe("run", () => {
     it("reports up to date when no updates are available", async () => {
       const outputLines: CommandOutputLine[] = [];
-      const logLines: string[] = [];
       const context = createMockContext({
-        captureOutputResult: "Software Update Tool\nNo new software available.",
+        runStepAndCaptureOutputResult: "Software Update Tool\nNo new software available.",
+        checkOutputLines: [
+          "Software Update Tool",
+          "No new software available.",
+        ],
         outputLines,
-        logLines,
       });
 
       await macosStep.run(context);
 
       expect(outputLines).toEqual([
+        { text: "Checking for macOS updates...", source: "stdout" },
+        { text: "Software Update Tool", source: "stdout" },
+        { text: "No new software available.", source: "stdout" },
         { text: "macOS is already up to date.", source: "stdout" },
       ]);
       expect(context.runStep).not.toHaveBeenCalled();
     });
 
-    it("logs the update list output regardless of path", async () => {
-      const logLines: string[] = [];
+    it("shows a checking status line before invoking softwareupdate", async () => {
+      const outputLines: CommandOutputLine[] = [];
       const context = createMockContext({
-        captureOutputResult: "No new software available.",
-        logLines,
+        runStepAndCaptureOutputResult: "No new software available.",
+        outputLines,
       });
 
       await macosStep.run(context);
 
-      expect(logLines).toContain("No new software available.");
+      expect(outputLines[0]).toEqual({
+        text: "Checking for macOS updates...",
+        source: "stdout",
+      });
     });
 
     it("runs softwareupdate when updates are found", async () => {
       const runStepCommands: string[] = [];
       const outputLines: CommandOutputLine[] = [];
       const context = createMockContext({
-        captureOutputResult: "Software Update found the following:\n* macOS 15.1",
+        runStepAndCaptureOutputResult: "Software Update found the following:\n* macOS 15.1",
+        checkOutputLines: [
+          "Software Update found the following:",
+          "* macOS 15.1",
+        ],
         runStepCommands,
         outputLines,
       });
@@ -73,36 +92,41 @@ describe("macosStep", () => {
       await macosStep.run(context);
 
       expect(outputLines).toEqual([
-        { text: "Software Update found the following:\n* macOS 15.1", source: "stdout" },
+        { text: "Checking for macOS updates...", source: "stdout" },
+        { text: "Software Update found the following:", source: "stdout" },
+        { text: "* macOS 15.1", source: "stdout" },
         { text: "Updates found — installing now...", source: "stdout" },
       ]);
       expect(runStepCommands).toEqual(["softwareupdate -ia --verbose"]);
     });
 
-    it("outputs the update list before installing", async () => {
+    it("starts installation after the update check output has streamed", async () => {
       const outputLines: CommandOutputLine[] = [];
-      const updateOutput = "Software Update found:\n* macOS 15.1";
       const context = createMockContext({
-        captureOutputResult: updateOutput,
+        runStepAndCaptureOutputResult: "Software Update found:\n* macOS 15.1",
+        checkOutputLines: [
+          "Software Update found:",
+          "* macOS 15.1",
+        ],
         outputLines,
       });
 
       await macosStep.run(context);
 
-      expect(outputLines[0].text).toBe(updateOutput);
-      expect(outputLines[1].text).toContain("Updates found");
+      expect(outputLines[1].text).toBe("Software Update found:");
+      expect(outputLines[3].text).toContain("Updates found");
     });
 
-    it("calls captureOutput with softwareupdate -l", async () => {
+    it("calls runStepAndCaptureOutput with softwareupdate -l", async () => {
       const context = createMockContext({
-        captureOutputResult: "No new software available.",
+        runStepAndCaptureOutputResult: "No new software available.",
       });
 
       await macosStep.run(context);
 
-      expect(context.captureOutput).toHaveBeenCalledOnce();
-      const callArgs = vi.mocked(context.captureOutput).mock.calls[0][0];
-      expect(callArgs.shellCommand).toContain("softwareupdate -l");
+      expect(context.runStepAndCaptureOutput).toHaveBeenCalledOnce();
+      expect(vi.mocked(context.runStepAndCaptureOutput).mock.calls[0][0]).toContain("softwareupdate -l");
+      expect(context.captureOutput).not.toHaveBeenCalled();
     });
   });
 });

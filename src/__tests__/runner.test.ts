@@ -3,6 +3,7 @@ import {
   doesShellCommandSucceed,
   captureShellCommandOutput,
   runShellCommand,
+  runShellCommandAndCaptureOutput,
   cancelActiveShellCommand,
   ShellCommandCanceledError,
   type CommandOutputLine,
@@ -168,5 +169,33 @@ describe("runShellCommand", () => {
     }
 
     expect(logLines).toContain("[braeburn] Command canceled by user input (q).");
+  });
+});
+
+describe("runShellCommandAndCaptureOutput", () => {
+  it("returns captured stdout while streaming lines", async () => {
+    const lines: CommandOutputLine[] = [];
+
+    const capturedOutput = await runShellCommandAndCaptureOutput({
+      shellCommand: "printf 'hello\\nworld\\n'",
+      onOutputLine: (line) => lines.push(line),
+      logWriter: async () => {},
+    });
+
+    expect(capturedOutput).toBe("hello\nworld");
+    expect(lines).toEqual([
+      { text: "hello", source: "stdout" },
+      { text: "world", source: "stdout" },
+    ]);
+  });
+
+  it("captures a final line even when the command does not end with a newline", async () => {
+    const capturedOutput = await runShellCommandAndCaptureOutput({
+      shellCommand: "printf 'final-line'",
+      onOutputLine: () => {},
+      logWriter: async () => {},
+    });
+
+    expect(capturedOutput).toBe("final-line");
   });
 });

@@ -2,6 +2,7 @@ import {
   doesShellCommandSucceed,
   runShellCommand,
   captureShellCommandOutput,
+  runShellCommandAndCaptureOutput,
   type OutputLineCallback,
 } from "../runner.js";
 import type { StepLogWriter } from "../logger.js";
@@ -26,6 +27,17 @@ export async function runStep(
   });
 }
 
+export async function runStepAndCaptureOutput(
+  shellCommand: string,
+  context: StepRunContext,
+): Promise<string> {
+  return runShellCommandAndCaptureOutput({
+    shellCommand,
+    onOutputLine: context.onOutputLine,
+    logWriter: context.logWriter,
+  });
+}
+
 export function createDefaultStepRunContext(
   onOutputLine: OutputLineCallback,
   logWriter: StepLogWriter,
@@ -34,6 +46,7 @@ export function createDefaultStepRunContext(
     onOutputLine,
     logWriter,
     runStep: (shellCommand) => runStep(shellCommand, context),
+    runStepAndCaptureOutput: (shellCommand) => runStepAndCaptureOutput(shellCommand, context),
     captureOutput: captureShellCommandOutput,
   };
   return context;

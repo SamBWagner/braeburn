@@ -47,6 +47,12 @@ function createEngineDependencies() {
       await logWriter(shellCommand);
       onOutputLine({ text: shellCommand, source: "stdout" });
     },
+    runStepAndCaptureOutput: async (shellCommand) => {
+      shellCommands.push(shellCommand);
+      await logWriter(shellCommand);
+      onOutputLine({ text: shellCommand, source: "stdout" });
+      return shellCommand;
+    },
     captureOutput: async () => "",
   });
 

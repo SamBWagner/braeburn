@@ -82,6 +82,7 @@ function createRunOnlyContext(recordedCommands: string[]): StepRunContext {
     runStep: vi.fn(async (shellCommand: string) => {
       recordedCommands.push(shellCommand);
     }),
+    runStepAndCaptureOutput: vi.fn(async () => ""),
     captureOutput: vi.fn(async () => ""),
   };
 }

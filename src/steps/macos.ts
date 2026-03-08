@@ -14,11 +14,11 @@ const macosStep: Step = {
   },
 
   async run(context: StepRunContext): Promise<void> {
-    const updateListOutput = await context.captureOutput({
-      shellCommand: "softwareupdate -l 2>&1",
+    context.onOutputLine({
+      text: "Checking for macOS updates...",
+      source: "stdout",
     });
-
-    context.logWriter(updateListOutput);
+    const updateListOutput = await context.runStepAndCaptureOutput("softwareupdate -l 2>&1");
 
     const noUpdatesAvailable = updateListOutput.includes(
       "No new software available"
@@ -32,7 +32,6 @@ const macosStep: Step = {
       return;
     }
 
-    context.onOutputLine({ text: updateListOutput, source: "stdout" });
     context.onOutputLine({
       text: "Updates found — installing now...",
       source: "stdout",

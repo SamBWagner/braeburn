@@ -1,6 +1,6 @@
 import { buildHeaderLines } from "./header.js";
 import { buildActiveStepLines } from "./currentStep.js";
-import { buildOutputBoxLines, type TerminalDimensions } from "./outputBox.js";
+import { buildStepOutputLines, type TerminalDimensions } from "./outputLines.js";
 import { buildPromptLines } from "./prompt.js";
 import { buildFailedStepLogHintLines, buildVersionReportLines } from "./versionReport.js";
 import type { AppState } from "./state.js";
@@ -84,7 +84,7 @@ export function buildScreenWithAnimationFrame(
 
       if (isShowingOutput) {
         lines.push("");
-        lines.push(...buildOutputBoxLines(state.currentOutputLines, currentStep.name, terminalDimensions));
+        lines.push(...buildStepOutputLines(state.currentOutputLines, terminalDimensions));
       }
 
       if (state.currentPrompt) {

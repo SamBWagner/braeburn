@@ -6,6 +6,7 @@ export type StepRunContext = {
   onOutputLine: OutputLineCallback;
   logWriter: StepLogWriter;
   runStep: (shellCommand: string) => Promise<void>;
+  runStepAndCaptureOutput: (shellCommand: string) => Promise<string>;
   captureOutput: (options: { shellCommand: string }) => Promise<string>;
 };
 

@@ -85,7 +85,7 @@ describe("buildScreen", () => {
     );
   });
 
-  it("shows the output box when running with output lines", () => {
+  it("shows inline output when running with output lines", () => {
     const state = makeState({
       currentPhase: "running",
       runCompletion: "in-progress",
@@ -104,9 +104,32 @@ describe("buildScreen", () => {
       "  · A test step\n" +
       "  ◐ Running... press q to end this step\n" +
       "\n" +
-      "  ┌─ Test output ────────────────────────────────────────────────────────────┐\n" +
-      "  │ updating packages...\n" +
-      "  └──────────────────────────────────────────────────────────────────────────┘\n" +
+      "  updating packages...\n" +
+      "\n"
+    );
+  });
+
+  it("renders multi-line output as separate lines", () => {
+    const state = makeState({
+      currentPhase: "running",
+      runCompletion: "in-progress",
+      currentOutputLines: [{ text: "line one\nline two", source: "stdout" }],
+    });
+    const screen = buildScreen(state, DIMENSIONS);
+    expect(stripAnsi(screen)).toBe(
+      "braeburn v1.0.0\n" +
+      "macOS system updater\n" +
+      "\n" +
+      "System / CLI Tools\n" +
+      "◐ Test\n" +
+      "\n" +
+      "\n" +
+      "  ─── Step 1/1  Test  ────────────────────\n" +
+      "  · A test step\n" +
+      "  ◐ Running... press q to end this step\n" +
+      "\n" +
+      "  line one\n" +
+      "  line two\n" +
       "\n"
     );
   });

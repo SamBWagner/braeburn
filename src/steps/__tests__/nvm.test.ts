@@ -9,6 +9,7 @@ function createMockContext(runStepCommands: string[]): StepRunContext {
     runStep: vi.fn(async (shellCommand: string) => {
       runStepCommands.push(shellCommand);
     }),
+    runStepAndCaptureOutput: vi.fn(async () => ""),
     captureOutput: vi.fn(async () => ""),
   };
 }
