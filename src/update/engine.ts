@@ -1,9 +1,14 @@
 import { createLogWriterForStep, type StepLogWriter } from "../logger.js";
-import { runShellCommand, ShellCommandCanceledError } from "../runner.js";
+import {
+  runShellCommand,
+  ShellCommandCanceledError,
+  type CommandOutputLine,
+} from "../runner.js";
 import { createDefaultStepRunContext, type Step } from "../steps/index.js";
 import { toDisplaySteps } from "./displayStep.js";
 import {
   createInitialUpdateState,
+  type CompletedStepRecord,
   type LogoVisibility,
   type ResolvedVersion,
   type UpdateState,
@@ -78,6 +83,36 @@ function wasStepCanceledByUser(error: unknown): boolean {
   return error instanceof ShellCommandCanceledError;
 }
 
+function createFailureOutputLines(
+  currentOutputLines: CommandOutputLine[],
+  error: unknown,
+): CommandOutputLine[] {
+  if (currentOutputLines.length > 0) {
+    return [...currentOutputLines];
+  }
+
+  const errorMessage = error instanceof Error && error.message.length > 0
+    ? error.message
+    : "Command failed.";
+
+  return [{ text: errorMessage, source: "stderr" }];
+}
+
+function createFailedStepRecord(options: {
+  error: unknown;
+  failureOutputLines: CommandOutputLine[];
+  logStepId: string;
+}): CompletedStepRecord {
+  const errorMessage = options.error instanceof Error ? options.error.message : String(options.error);
+
+  return {
+    phase: "failed",
+    summaryNote: wasStepCanceledByUser(options.error) ? "canceled by user" : errorMessage,
+    logStepId: options.logStepId,
+    failureOutputLines: [...options.failureOutputLines],
+  };
+}
+
 export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<UpdateState> {
   const dependencies = resolveDependencies(options.dependencies);
   const state = createInitialUpdateState(
@@ -145,12 +180,15 @@ export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<
           promptMode = "interactive";
         }
 
+        const failureOutputLines = createFailureOutputLines(state.currentOutputLines, error);
         state.currentPhase = "failed";
+        state.currentOutputLines = failureOutputLines;
         reportState(state, options.onStateChanged);
-        state.completedStepRecords.push({
-          phase: "failed",
-          summaryNote: wasStepCanceledByUser(error) ? "canceled by user" : "install failed",
-        });
+        state.completedStepRecords.push(createFailedStepRecord({
+          error,
+          failureOutputLines,
+          logStepId: `${step.id}-install`,
+        }));
         continue;
       }
     }
@@ -195,14 +233,15 @@ export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<
         promptMode = "interactive";
       }
 
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const failureOutputLines = createFailureOutputLines(state.currentOutputLines, error);
       state.currentPhase = "failed";
-      state.currentOutputLines = [];
+      state.currentOutputLines = failureOutputLines;
       reportState(state, options.onStateChanged);
-      state.completedStepRecords.push({
-        phase: "failed",
-        summaryNote: wasStepCanceledByUser(error) ? "canceled by user" : errorMessage,
-      });
+      state.completedStepRecords.push(createFailedStepRecord({
+        error,
+        failureOutputLines,
+        logStepId: step.id,
+      }));
     }
   }
 

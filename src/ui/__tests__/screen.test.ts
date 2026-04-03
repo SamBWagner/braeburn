@@ -109,6 +109,29 @@ describe("buildScreen", () => {
     );
   });
 
+  it("shows inline output when a step has failed", () => {
+    const state = makeState({
+      currentPhase: "failed",
+      runCompletion: "in-progress",
+      currentOutputLines: [{ text: "fatal: update failed", source: "stderr" }],
+    });
+    const screen = buildScreen(state, DIMENSIONS);
+    expect(stripAnsi(screen)).toBe(
+      "braeburn v1.0.0\n" +
+      "macOS system updater\n" +
+      "\n" +
+      "System / CLI Tools\n" +
+      "✗ Test\n" +
+      "\n" +
+      "\n" +
+      "  ─── Step 1/1  Test  ────────────────────\n" +
+      "  · A test step\n" +
+      "\n" +
+      "  fatal: update failed\n" +
+      "\n"
+    );
+  });
+
   it("renders multi-line output as separate lines", () => {
     const state = makeState({
       currentPhase: "running",
@@ -184,7 +207,12 @@ describe("buildScreen", () => {
   it("shows failed-step log hint lines when finished with failures", () => {
     const state = makeState({
       steps: [makeStep({ id: "nvm", name: "Node.js (nvm)" })],
-      completedStepRecords: [{ phase: "failed", summaryNote: "nvm error" }],
+      completedStepRecords: [{
+        phase: "failed",
+        summaryNote: "nvm error",
+        logStepId: "nvm",
+        failureOutputLines: [{ text: "Command failed with exit code 3", source: "stderr" }],
+      }],
       runCompletion: "finished",
       versionReport: [
         { label: "Node", value: "v22.0.0" },
@@ -202,9 +230,14 @@ describe("buildScreen", () => {
       "  ─── Versions ─────────────────────────\n" +
       "  · Node: v22.0.0\n" +
       "\n" +
-      "  ✓ All done!\n" +
+      "  ✗ Done (1 step failed)\n" +
       "\n" +
-      "  ✗ Step nvm failed. Please run braeburn log --nvm to see what happened.\n" +
+      "  ✗ Step nvm failed. Please run braeburn log nvm to see what happened.\n" +
+      "\n" +
+      "  ─── Step 1/1  Node.js (nvm)  ────────────────────\n" +
+      "  · A test step\n" +
+      "\n" +
+      "  Command failed with exit code 3\n" +
       "\n"
     );
   });

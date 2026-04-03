@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createInitialAppState } from "../state.js";
+import { countFailedSteps, createInitialAppState } from "../state.js";
 import type { DisplayStep } from "../state.js";
 
 function makeStep(overrides: Partial<DisplayStep> = {}): DisplayStep {
@@ -52,5 +52,16 @@ describe("createInitialAppState", () => {
     const state = createInitialAppState([], "1.0.0", "visible");
     expect(state.currentPrompt).toBeUndefined();
     expect(state.versionReport).toBeUndefined();
+  });
+});
+
+describe("countFailedSteps", () => {
+  it("counts only failed completed step records", () => {
+    expect(countFailedSteps([
+      { phase: "complete" },
+      { phase: "failed" },
+      { phase: "skipped" },
+      { phase: "failed" },
+    ])).toBe(2);
   });
 });

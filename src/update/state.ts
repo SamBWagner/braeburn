@@ -23,6 +23,8 @@ export type StepPhase =
 export type CompletedStepRecord = {
   phase: StepPhase;
   summaryNote?: string;
+  logStepId?: string;
+  failureOutputLines?: CommandOutputLine[];
 };
 
 export type CurrentPrompt = {
@@ -74,3 +76,7 @@ export function createInitialUpdateState(
 }
 
 export const createInitialAppState = createInitialUpdateState;
+
+export function countFailedSteps(completedStepRecords: CompletedStepRecord[]): number {
+  return completedStepRecords.filter((completedStepRecord) => completedStepRecord.phase === "failed").length;
+}

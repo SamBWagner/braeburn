@@ -4,7 +4,7 @@ import { captureYesNo } from "../ui/prompt.js";
 import { buildScreen, buildScreenWithAnimationFrame, createScreenRenderer } from "../ui/screen.js";
 import { hideCursorDuringExecution } from "../ui/terminal.js";
 import { runUpdateEngine, type PromptMode } from "../update/engine.js";
-import type { LogoVisibility, UpdateState } from "../update/state.js";
+import { countFailedSteps, type LogoVisibility, type UpdateState } from "../update/state.js";
 import type { Step } from "../steps/index.js";
 import { cancelActiveShellCommand } from "../runner.js";
 
@@ -13,6 +13,14 @@ type RunUpdateCommandOptions = {
   promptMode: PromptMode;
   logoVisibility: LogoVisibility;
   version: string;
+};
+
+export type UpdateCommandResult = {
+  failedStepCount: number;
+};
+
+type ExitCodeWritable = {
+  exitCode: string | number | null | undefined;
 };
 
 type UpdateKeypressKey = {
@@ -25,13 +33,23 @@ function shouldCaptureRuntimeAbortKey(state: UpdateState | undefined): boolean {
   return state?.currentPhase === "running" || state?.currentPhase === "installing";
 }
 
-export async function runUpdateCommand(options: RunUpdateCommandOptions): Promise<void> {
+export function applyUpdateCommandResult(
+  updateCommandResult: UpdateCommandResult,
+  processWithExitCode: ExitCodeWritable,
+): void {
+  if (updateCommandResult.failedStepCount > 0) {
+    processWithExitCode.exitCode = 1;
+  }
+}
+
+export async function runUpdateCommand(options: RunUpdateCommandOptions): Promise<UpdateCommandResult> {
   const renderScreen = createScreenRenderer();
   const restoreCursor = hideCursorDuringExecution({ screenBuffer: "alternate" });
   let finalScreen = "";
   let latestState: UpdateState | undefined = undefined;
   let runtimeAbortKeyCaptureEnabled = false;
   let animationFrameIndex = 0;
+  let updateCommandResult: UpdateCommandResult = { failedStepCount: 0 };
 
   const handleRuntimeKeypress = (typedCharacter: string, key: UpdateKeypressKey): void => {
     if (key?.ctrl && key?.name === "c") {
@@ -114,6 +132,9 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
       },
     });
     finalScreen = buildScreen(finalState);
+    updateCommandResult = {
+      failedStepCount: countFailedSteps(finalState.completedStepRecords),
+    };
   } finally {
     disableRuntimeAbortKeyCapture();
     clearInterval(animationTimer);
@@ -123,4 +144,6 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
   if (finalScreen) {
     process.stdout.write(finalScreen);
   }
+
+  return updateCommandResult;
 }

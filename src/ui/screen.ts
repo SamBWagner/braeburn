@@ -3,7 +3,8 @@ import { buildActiveStepLines } from "./currentStep.js";
 import { buildStepOutputLines, type TerminalDimensions } from "./outputLines.js";
 import { buildPromptLines } from "./prompt.js";
 import { buildFailedStepLogHintLines, buildVersionReportLines } from "./versionReport.js";
-import type { AppState } from "./state.js";
+import { countFailedSteps, type AppState, type DisplayStep } from "./state.js";
+import type { CommandOutputLine } from "../runner.js";
 
 export type ScreenRenderer = (content: string) => void;
 
@@ -20,14 +21,15 @@ export function buildScreen(state: AppState, terminalDimensions?: TerminalDimens
   return buildScreenWithAnimationFrame(state, 0, terminalDimensions);
 }
 
-export function buildScreenWithAnimationFrame(
-  state: AppState,
-  activityFrameIndex: number,
-  terminalDimensions?: TerminalDimensions,
-): string {
-  const lines: string[] = [];
-  const failedStepIds = state.completedStepRecords.flatMap((record, stepIndex) => {
-    if (record.phase !== "failed") {
+type FailedStepDisplay = {
+  step: DisplayStep;
+  stepNumber: number;
+  failureOutputLines: CommandOutputLine[];
+};
+
+function buildFailedStepLogHints(state: AppState): { stepId: string; logStepId: string }[] {
+  return state.completedStepRecords.flatMap((completedStepRecord, stepIndex) => {
+    if (completedStepRecord.phase !== "failed") {
       return [];
     }
 
@@ -36,8 +38,49 @@ export function buildScreenWithAnimationFrame(
       return [];
     }
 
-    return [failedStep.id];
+    return [{
+      stepId: failedStep.id,
+      logStepId: completedStepRecord.logStepId ?? failedStep.id,
+    }];
   });
+}
+
+function findLatestFailedStepDisplay(state: AppState): FailedStepDisplay | undefined {
+  for (let stepIndex = state.completedStepRecords.length - 1; stepIndex >= 0; stepIndex -= 1) {
+    const completedStepRecord = state.completedStepRecords[stepIndex];
+    if (completedStepRecord?.phase !== "failed") {
+      continue;
+    }
+
+    const failedStep = state.steps[stepIndex];
+    if (!failedStep) {
+      continue;
+    }
+
+    const failureOutputLines = completedStepRecord.failureOutputLines;
+    if (!failureOutputLines || failureOutputLines.length === 0) {
+      continue;
+    }
+
+    return {
+      step: failedStep,
+      stepNumber: stepIndex + 1,
+      failureOutputLines,
+    };
+  }
+
+  return undefined;
+}
+
+export function buildScreenWithAnimationFrame(
+  state: AppState,
+  activityFrameIndex: number,
+  terminalDimensions?: TerminalDimensions,
+): string {
+  const lines: string[] = [];
+  const failedStepCount = countFailedSteps(state.completedStepRecords);
+  const failedStepLogHints = buildFailedStepLogHints(state);
+  const latestFailedStepDisplay = findLatestFailedStepDisplay(state);
 
   lines.push(
     ...buildHeaderLines({
@@ -56,12 +99,30 @@ export function buildScreenWithAnimationFrame(
   if (state.runCompletion === "finished") {
     if (state.versionReport) {
       lines.push("");
-      lines.push(...buildVersionReportLines(state.versionReport));
+      lines.push(...buildVersionReportLines({
+        versions: state.versionReport,
+        failedStepCount,
+      }));
     }
 
-    if (failedStepIds.length > 0) {
+    if (failedStepLogHints.length > 0) {
       lines.push("");
-      lines.push(...buildFailedStepLogHintLines(failedStepIds));
+      lines.push(...buildFailedStepLogHintLines(failedStepLogHints));
+    }
+
+    if (latestFailedStepDisplay) {
+      lines.push("");
+      lines.push(
+        ...buildActiveStepLines({
+          step: latestFailedStepDisplay.step,
+          stepNumber: latestFailedStepDisplay.stepNumber,
+          totalSteps: state.steps.length,
+          phase: "failed",
+          activityFrameIndex,
+        })
+      );
+      lines.push("");
+      lines.push(...buildStepOutputLines(latestFailedStepDisplay.failureOutputLines, terminalDimensions));
     }
   } else {
     const currentStep = state.steps[state.currentStepIndex];
@@ -79,7 +140,11 @@ export function buildScreenWithAnimationFrame(
       );
 
       const isShowingOutput =
-        (state.currentPhase === "running" || state.currentPhase === "installing") &&
+        (
+          state.currentPhase === "running" ||
+          state.currentPhase === "installing" ||
+          state.currentPhase === "failed"
+        ) &&
         state.currentOutputLines.length > 0;
 
       if (isShowingOutput) {

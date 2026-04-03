@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { ALL_STEPS } from "./steps/catalog.js";
 import type { Step } from "./steps/index.js";
-import { runUpdateCommand } from "./commands/update.js";
+import { applyUpdateCommandResult, runUpdateCommand } from "./commands/update.js";
 import { runLogCommand, runLogListCommand } from "./commands/log.js";
 import { runConfigCommand, runConfigUpdateCommand } from "./commands/config.js";
 import { runSetupCommand } from "./commands/setup.js";
@@ -103,12 +103,14 @@ Examples:
 
       const logoIsEnabled = options.logo !== false && isLogoEnabled(config);
 
-      await runUpdateCommand({
+      const updateCommandResult = await runUpdateCommand({
         steps: stepsToRun,
         promptMode: autoYes ? "auto-accept" : "interactive",
         logoVisibility: logoIsEnabled ? "visible" : "hidden",
         version: BRAEBURN_VERSION,
       });
+
+      applyUpdateCommandResult(updateCommandResult, process);
     }
   );
 

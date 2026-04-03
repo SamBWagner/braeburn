@@ -3,6 +3,7 @@ import { runUpdateEngine, type ConfirmationAnswer } from "../engine.js";
 import type { Step, StepRunContext } from "../../steps/index.js";
 import type { CommandOutputLine } from "../../runner.js";
 import { ShellCommandCanceledError } from "../../runner.js";
+import { countFailedSteps } from "../state.js";
 
 function makeStep(overrides: Partial<Step> = {}): Step {
   return {
@@ -223,8 +224,131 @@ describe("runUpdateEngine", () => {
     expect(canceledStepRun).toHaveBeenCalledOnce();
     expect(stepTwoRun).toHaveBeenCalledOnce();
     expect(result.completedStepRecords).toEqual([
-      { phase: "failed", summaryNote: "canceled by user" },
+      {
+        phase: "failed",
+        summaryNote: "canceled by user",
+        logStepId: "one",
+        failureOutputLines: [{ text: "Command canceled by user: step-one", source: "stderr" }],
+      },
       { phase: "complete", summaryNote: "updated" },
     ]);
+  });
+
+  it("preserves streamed output lines on failed steps", async () => {
+    const { dependencies } = createEngineDependencies();
+
+    const failedRun = vi.fn(async (context: StepRunContext) => {
+      context.onOutputLine({ text: "err-before-fail", source: "stderr" });
+      throw new Error("step exploded");
+    });
+
+    const result = await runUpdateEngine({
+      steps: [makeStep({ id: "nvm", name: "Node.js (nvm)", run: failedRun })],
+      promptMode: "interactive",
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      askForConfirmation: async () => "yes",
+      collectVersions: async () => [],
+      onStateChanged: () => {},
+      dependencies,
+    });
+
+    expect(result.completedStepRecords).toEqual([
+      {
+        phase: "failed",
+        summaryNote: "step exploded",
+        logStepId: "nvm",
+        failureOutputLines: [{ text: "err-before-fail", source: "stderr" }],
+      },
+    ]);
+  });
+
+  it("creates a fallback failure output line when a step throws without streamed output", async () => {
+    const { dependencies } = createEngineDependencies();
+
+    const failedRun = vi.fn(async () => {
+      throw new Error("Command failed with exit code 3");
+    });
+
+    const result = await runUpdateEngine({
+      steps: [makeStep({ id: "nvm", name: "Node.js (nvm)", run: failedRun })],
+      promptMode: "interactive",
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      askForConfirmation: async () => "yes",
+      collectVersions: async () => [],
+      onStateChanged: () => {},
+      dependencies,
+    });
+
+    expect(result.completedStepRecords).toEqual([
+      {
+        phase: "failed",
+        summaryNote: "Command failed with exit code 3",
+        logStepId: "nvm",
+        failureOutputLines: [{ text: "Command failed with exit code 3", source: "stderr" }],
+      },
+    ]);
+  });
+
+  it("stores install failures under the install log step id", async () => {
+    const { dependencies } = createEngineDependencies();
+    dependencies.runCommand = vi.fn(async () => {
+      throw new Error("brew install failed");
+    });
+
+    const result = await runUpdateEngine({
+      steps: [
+        makeStep({
+          id: "mas",
+          name: "Mac App Store",
+          brewPackageToInstall: "mas",
+          checkIsAvailable: async () => false,
+        }),
+      ],
+      promptMode: "interactive",
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      askForConfirmation: async () => "yes",
+      collectVersions: async () => [],
+      onStateChanged: () => {},
+      dependencies,
+    });
+
+    expect(result.completedStepRecords).toEqual([
+      {
+        phase: "failed",
+        summaryNote: "brew install failed",
+        logStepId: "mas-install",
+        failureOutputLines: [{ text: "brew install failed", source: "stderr" }],
+      },
+    ]);
+  });
+
+  it("counts failed completed steps for mixed outcomes", async () => {
+    const { dependencies } = createEngineDependencies();
+
+    const failedRun = vi.fn(async () => {
+      throw new Error("first failed");
+    });
+    const successfulRun = vi.fn(async (context: StepRunContext) => {
+      await context.runStep("second succeeded");
+    });
+
+    const result = await runUpdateEngine({
+      steps: [
+        makeStep({ id: "first", name: "First", run: failedRun }),
+        makeStep({ id: "second", name: "Second", run: successfulRun }),
+      ],
+      promptMode: "interactive",
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      askForConfirmation: async () => "yes",
+      collectVersions: async () => [],
+      onStateChanged: () => {},
+      dependencies,
+    });
+
+    expect(countFailedSteps(result.completedStepRecords)).toBe(1);
   });
 });

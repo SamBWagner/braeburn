@@ -10,4 +10,5 @@ export {
   type AppState,
   createInitialUpdateState,
   createInitialAppState,
+  countFailedSteps,
 } from "../update/state.js";
