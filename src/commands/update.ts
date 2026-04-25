@@ -8,6 +8,8 @@ import { countFailedSteps, type LogoVisibility, type UpdateState } from "../upda
 import type { Step } from "../steps/index.js";
 import { cancelActiveShellCommand } from "../runner.js";
 
+const RUNTIME_RENDER_INTERVAL_MS = 100;
+
 type RunUpdateCommandOptions = {
   steps: Step[];
   promptMode: PromptMode;
@@ -33,6 +35,22 @@ function shouldCaptureRuntimeAbortKey(state: UpdateState | undefined): boolean {
   return state?.currentPhase === "running" || state?.currentPhase === "installing";
 }
 
+function shouldThrottleRuntimeRender(state: UpdateState): boolean {
+  return state.runCompletion !== "finished" && shouldCaptureRuntimeAbortKey(state);
+}
+
+export function shouldRenderRuntimeStateImmediately(
+  state: UpdateState,
+  lastRuntimeRenderTime: number,
+  currentTime: number,
+): boolean {
+  if (!shouldThrottleRuntimeRender(state)) {
+    return true;
+  }
+
+  return currentTime - lastRuntimeRenderTime >= RUNTIME_RENDER_INTERVAL_MS;
+}
+
 export function applyUpdateCommandResult(
   updateCommandResult: UpdateCommandResult,
   processWithExitCode: ExitCodeWritable,
@@ -50,6 +68,29 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
   let runtimeAbortKeyCaptureEnabled = false;
   let animationFrameIndex = 0;
   let updateCommandResult: UpdateCommandResult = { failedStepCount: 0 };
+  let lastRuntimeRenderTime = 0;
+
+  const renderState = (state: UpdateState): void => {
+    renderScreen(buildScreenWithAnimationFrame(state, animationFrameIndex));
+    if (shouldThrottleRuntimeRender(state)) {
+      lastRuntimeRenderTime = Date.now();
+    }
+  };
+
+  const renderStateWithRuntimeThrottle = (state: UpdateState): void => {
+    if (!shouldThrottleRuntimeRender(state)) {
+      renderState(state);
+      return;
+    }
+
+    const currentTime = Date.now();
+    if (shouldRenderRuntimeStateImmediately(state, lastRuntimeRenderTime, currentTime)) {
+      renderState(state);
+      return;
+    }
+
+    // The animation timer renders the latest runtime state at the next frame.
+  };
 
   const handleRuntimeKeypress = (typedCharacter: string, key: UpdateKeypressKey): void => {
     if (key?.ctrl && key?.name === "c") {
@@ -110,8 +151,8 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
     }
 
     animationFrameIndex += 1;
-    renderScreen(buildScreenWithAnimationFrame(latestState, animationFrameIndex));
-  }, 100);
+    renderState(latestState);
+  }, RUNTIME_RENDER_INTERVAL_MS);
 
   try {
     const finalState = await runUpdateEngine({
@@ -128,7 +169,7 @@ export async function runUpdateCommand(options: RunUpdateCommandOptions): Promis
         } else {
           disableRuntimeAbortKeyCapture();
         }
-        renderScreen(buildScreenWithAnimationFrame(state, animationFrameIndex));
+        renderStateWithRuntimeThrottle(state);
       },
     });
     finalScreen = buildScreen(finalState);

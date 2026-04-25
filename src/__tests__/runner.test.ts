@@ -5,6 +5,7 @@ import {
   runShellCommand,
   runShellCommandAndCaptureOutput,
   cancelActiveShellCommand,
+  createShellCommandRunner,
   ShellCommandCanceledError,
   type CommandOutputLine,
 } from "../runner.js";
@@ -89,6 +90,22 @@ describe("runShellCommand", () => {
     expect(logLines).toEqual(["logged"]);
   });
 
+  it("awaits async log writes in output order before resolving", async () => {
+    const logLines: string[] = [];
+
+    await runShellCommand({
+      shellCommand: "printf 'first\\nsecond\\n'",
+      onOutputLine: () => {},
+      logWriter: async (line) => {
+        const delayMs = line === "first" ? 30 : 0;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        logLines.push(line);
+      },
+    });
+
+    expect(logLines).toEqual(["first", "second"]);
+  });
+
   it("calls onOutputLine with stderr data", async () => {
     const lines: CommandOutputLine[] = [];
 
@@ -129,6 +146,19 @@ describe("runShellCommand", () => {
     expect(lines).toContainEqual({ text: "err", source: "stderr" });
   });
 
+  it("chunks very long unterminated output lines while streaming", async () => {
+    const lines: CommandOutputLine[] = [];
+
+    await runShellCommand({
+      shellCommand: "node -e \"process.stdout.write('a'.repeat(20000))\"",
+      onOutputLine: (line) => lines.push(line),
+      logWriter: async () => {},
+    });
+
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.map((line) => line.text).join("")).toHaveLength(20000);
+  });
+
   it("writes stderr and stdout tails to the log on failures", async () => {
     const logLines: string[] = [];
 
@@ -146,6 +176,26 @@ describe("runShellCommand", () => {
     expect(logLines).toContain("  err-before-fail");
     expect(logLines).toContain("[braeburn] stdout tail (1):");
     expect(logLines).toContain("  out-before-fail");
+  });
+
+  it("limits failure summary output tails", async () => {
+    const logLines: string[] = [];
+
+    await expect(
+      runShellCommand({
+        shellCommand: "for lineNumber in {1..25}; do echo \"line-$lineNumber\"; done; exit 9",
+        onOutputLine: () => {},
+        logWriter: async (line) => { logLines.push(line); },
+      })
+    ).rejects.toThrow();
+
+    const stdoutTailHeaderIndex = logLines.indexOf("[braeburn] stdout tail (20):");
+    expect(stdoutTailHeaderIndex).toBeGreaterThan(-1);
+
+    const summarizedTailLines = logLines.slice(stdoutTailHeaderIndex + 1);
+    expect(summarizedTailLines).not.toContain("  line-1");
+    expect(summarizedTailLines).toContain("  line-6");
+    expect(summarizedTailLines).toContain("  line-25");
   });
 
   it("cancels the active command when requested", async () => {
@@ -169,6 +219,26 @@ describe("runShellCommand", () => {
     }
 
     expect(logLines).toContain("[braeburn] Command canceled by user input (q).");
+  });
+
+  it("keeps cancellation isolated between runner instances", async () => {
+    const runner = createShellCommandRunner();
+    const cancelTimer = setTimeout(() => {
+      expect(cancelActiveShellCommand()).toBe(false);
+      runner.cancelActiveShellCommand();
+    }, 50);
+
+    try {
+      await expect(
+        runner.runShellCommand({
+          shellCommand: "sleep 5",
+          onOutputLine: () => {},
+          logWriter: async () => {},
+        })
+      ).rejects.toBeInstanceOf(ShellCommandCanceledError);
+    } finally {
+      clearTimeout(cancelTimer);
+    }
   });
 });
 

@@ -108,6 +108,43 @@ export function buildSetupScreen(items: SelectableStep[], cursorIndex: number): 
   return lines.join("\n") + "\n";
 }
 
+export function buildSetupItems(
+  allSteps: Step[],
+  availabilityResults: boolean[],
+): SelectableStep[] {
+  return allSteps.map((step, stepIndex) => ({
+    step: {
+      id: step.id,
+      name: step.name,
+      description: step.description,
+      categoryId: step.categoryId,
+      brewPackageToInstall: step.brewPackageToInstall,
+    },
+    selection:
+      PROTECTED_STEP_IDS.has(step.id) || CONSERVATIVE_DEFAULT_ON_STEP_IDS.has(step.id)
+        ? "selected"
+        : "deselected",
+    protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
+    availability: availabilityResults[stepIndex] ? "available" : "unavailable",
+  }));
+}
+
+export function buildConfigFromSetupItems(items: SelectableStep[]): BraeburnConfig {
+  const draftConfig: BraeburnConfig = {
+    defaultsProfile: "conservative-v2",
+    steps: {},
+  };
+
+  for (const item of items) {
+    if (item.protection === "protected") {
+      continue;
+    }
+    draftConfig.steps[item.step.id] = item.selection === "selected";
+  }
+
+  return cleanConfigForWrite(draftConfig);
+}
+
 export async function runSetupCommand(allSteps: Step[]): Promise<void> {
   const render = createScreenRenderer();
   const restoreCursor = hideCursorDuringExecution({ screenBuffer: "alternate" });
@@ -119,21 +156,7 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
       allSteps.map((step) => step.checkIsAvailable())
     );
 
-    const items: SelectableStep[] = allSteps.map((step, stepIndex) => ({
-      step: {
-        id: step.id,
-        name: step.name,
-        description: step.description,
-        categoryId: step.categoryId,
-        brewPackageToInstall: step.brewPackageToInstall,
-      },
-      selection:
-        PROTECTED_STEP_IDS.has(step.id) || CONSERVATIVE_DEFAULT_ON_STEP_IDS.has(step.id)
-          ? "selected"
-          : "deselected",
-      protection: PROTECTED_STEP_IDS.has(step.id) ? "protected" : "configurable",
-      availability: availabilityResults[stepIndex] ? "available" : "unavailable",
-    }));
+    const items = buildSetupItems(allSteps, availabilityResults);
 
     let cursorIndex = 0;
 
@@ -172,17 +195,7 @@ export async function runSetupCommand(allSteps: Step[]): Promise<void> {
       process.stdin.resume();
     });
 
-    const draftConfig: BraeburnConfig = {
-      defaultsProfile: "conservative-v2",
-      steps: {},
-    };
-    for (const item of items) {
-      if (item.protection === "protected") {
-        continue;
-      }
-      draftConfig.steps[item.step.id] = item.selection === "selected";
-    }
-    await writeConfig(cleanConfigForWrite(draftConfig));
+    await writeConfig(buildConfigFromSetupItems(items));
 
     const confirmationLines = [
       chalk.yellow(LOGO_ART),

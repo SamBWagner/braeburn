@@ -30,6 +30,8 @@ type PromptResolution = {
   decision: PromptDecision;
 };
 
+export const CURRENT_OUTPUT_LINE_LIMIT = 200;
+
 type RunUpdateEngineOptions = {
   steps: Step[];
   promptMode: PromptMode;
@@ -77,6 +79,13 @@ function reportState(
   onStateChanged: (state: UpdateState) => void,
 ): void {
   onStateChanged(state);
+}
+
+function appendCurrentOutputLine(state: UpdateState, line: CommandOutputLine): void {
+  state.currentOutputLines.push(line);
+  if (state.currentOutputLines.length > CURRENT_OUTPUT_LINE_LIMIT) {
+    state.currentOutputLines.splice(0, state.currentOutputLines.length - CURRENT_OUTPUT_LINE_LIMIT);
+  }
 }
 
 function wasStepCanceledByUser(error: unknown): boolean {
@@ -170,7 +179,7 @@ export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<
         await dependencies.runCommand({
           shellCommand: `brew install ${step.brewPackageToInstall}`,
           onOutputLine: (line) => {
-            state.currentOutputLines.push(line);
+            appendCurrentOutputLine(state, line);
             reportState(state, options.onStateChanged);
           },
           logWriter: installLogWriter,
@@ -218,7 +227,7 @@ export async function runUpdateEngine(options: RunUpdateEngineOptions): Promise<
       await step.run(
         dependencies.createStepRunContext(
           (line) => {
-            state.currentOutputLines.push(line);
+            appendCurrentOutputLine(state, line);
             reportState(state, options.onStateChanged);
           },
           stepLogWriter,

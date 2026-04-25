@@ -12,18 +12,38 @@ type RunCommandOptions = {
 };
 
 type ShellCommandExecutionResult = {
-  capturedOutput: string;
+  capturedOutput?: string;
 };
 
 type ShellCommandSubprocess = ReturnType<typeof execa>;
 
 const FAILURE_OUTPUT_TAIL_LINE_LIMIT = 20;
-let activeShellCommandSubprocess: ShellCommandSubprocess | undefined;
-const userCanceledSubprocesses = new WeakSet<ShellCommandSubprocess>();
+const DEFAULT_CAPTURE_MODE = "disabled";
+const MAX_BUFFERED_OUTPUT_LINE_LENGTH = 16_384;
+
+type CommandCaptureMode = "disabled" | "enabled";
 
 type BufferedLineEmitter = {
   appendChunk: (chunk: unknown) => void;
   flushPendingLine: () => void;
+};
+
+type ShellCommandFailureDetails = {
+  shellCommand: string;
+  error: unknown;
+  stdoutTailLines: string[];
+  stderrTailLines: string[];
+};
+
+type ShellCommandRunnerState = {
+  activeShellCommandSubprocess: ShellCommandSubprocess | undefined;
+  userCanceledSubprocesses: WeakSet<ShellCommandSubprocess>;
+};
+
+export type ShellCommandRunner = {
+  cancelActiveShellCommand: () => boolean;
+  runShellCommand: (options: RunCommandOptions) => Promise<void>;
+  runShellCommandAndCaptureOutput: (options: RunCommandOptions) => Promise<string>;
 };
 
 export class ShellCommandCanceledError extends Error {
@@ -38,28 +58,40 @@ export class ShellCommandCanceledError extends Error {
   }
 }
 
-export function cancelActiveShellCommand(): boolean {
-  if (!activeShellCommandSubprocess) {
+function createLimitedLineBuffer(lineLimit: number): {
+  add: (line: string) => void;
+  lines: () => string[];
+} {
+  const lines: string[] = [];
+
+  return {
+    add(line: string): void {
+      lines.push(line);
+      if (lines.length > lineLimit) {
+        lines.shift();
+      }
+    },
+
+    lines(): string[] {
+      return [...lines];
+    },
+  };
+}
+
+function cancelActiveShellCommandForState(state: ShellCommandRunnerState): boolean {
+  if (!state.activeShellCommandSubprocess) {
     return false;
   }
 
-  userCanceledSubprocesses.add(activeShellCommandSubprocess);
-  activeShellCommandSubprocess.kill("SIGTERM");
+  state.userCanceledSubprocesses.add(state.activeShellCommandSubprocess);
+  state.activeShellCommandSubprocess.kill("SIGTERM");
   return true;
 }
 
-function splitNonEmptyLines(text: string | undefined): string[] {
-  if (!text) {
-    return [];
-  }
-
-  return text.split(/\r?\n|\r/).filter(Boolean);
-}
-
 function buildFailureSummaryLines(
-  shellCommand: string,
-  error: unknown,
+  details: ShellCommandFailureDetails,
 ): string[] {
+  const { shellCommand, error, stdoutTailLines, stderrTailLines } = details;
   const defaultMessage = error instanceof Error ? error.message : String(error);
 
   if (typeof error !== "object" || error === null) {
@@ -93,13 +125,11 @@ function buildFailureSummaryLines(
     summaryLines.push(`[braeburn] Error: ${defaultMessage}`);
   }
 
-  const stderrTailLines = splitNonEmptyLines(errorDetails.stderr).slice(-FAILURE_OUTPUT_TAIL_LINE_LIMIT);
   if (stderrTailLines.length > 0) {
     summaryLines.push(`[braeburn] stderr tail (${stderrTailLines.length}):`);
     summaryLines.push(...stderrTailLines.map((line) => `  ${line}`));
   }
 
-  const stdoutTailLines = splitNonEmptyLines(errorDetails.stdout).slice(-FAILURE_OUTPUT_TAIL_LINE_LIMIT);
   if (stdoutTailLines.length > 0) {
     summaryLines.push(`[braeburn] stdout tail (${stdoutTailLines.length}):`);
     summaryLines.push(...stdoutTailLines.map((line) => `  ${line}`));
@@ -126,6 +156,11 @@ function createBufferedLineEmitter(
 
         emitLine(linePart);
       }
+
+      while (pendingText.length > MAX_BUFFERED_OUTPUT_LINE_LENGTH) {
+        emitLine(pendingText.slice(0, MAX_BUFFERED_OUTPUT_LINE_LENGTH));
+        pendingText = pendingText.slice(MAX_BUFFERED_OUTPUT_LINE_LENGTH);
+      }
     },
 
     flushPendingLine(): void {
@@ -140,19 +175,52 @@ function createBufferedLineEmitter(
 }
 
 async function executeShellCommand(
+  state: ShellCommandRunnerState,
   options: RunCommandOptions,
+  captureMode: CommandCaptureMode = DEFAULT_CAPTURE_MODE,
 ): Promise<ShellCommandExecutionResult> {
-  const capturedOutputLines: string[] = [];
+  const capturedOutputLines = captureMode === "enabled" ? [] as string[] : undefined;
+  const stdoutTailLines = createLimitedLineBuffer(FAILURE_OUTPUT_TAIL_LINE_LIMIT);
+  const stderrTailLines = createLimitedLineBuffer(FAILURE_OUTPUT_TAIL_LINE_LIMIT);
+  let logWriteQueue: Promise<void> = Promise.resolve();
+  let logWriteFailure: unknown;
   const subprocess = execa("bash", ["-c", options.shellCommand], {
-    all: true,
+    buffer: false,
     reject: true,
   });
-  activeShellCommandSubprocess = subprocess;
+  state.activeShellCommandSubprocess = subprocess;
+
+  const queueLogWrite = (line: string): void => {
+    logWriteQueue = logWriteQueue.then(async () => {
+      if (logWriteFailure) {
+        return;
+      }
+
+      try {
+        await options.logWriter(line);
+      } catch (error) {
+        logWriteFailure = error;
+      }
+    });
+  };
+
+  const waitForQueuedLogWrites = async (): Promise<void> => {
+    await logWriteQueue;
+    if (logWriteFailure) {
+      throw logWriteFailure;
+    }
+  };
 
   const emitOutputLine = (line: CommandOutputLine): void => {
-    capturedOutputLines.push(line.text);
+    if (line.source === "stdout") {
+      stdoutTailLines.add(line.text);
+    } else {
+      stderrTailLines.add(line.text);
+    }
+
+    capturedOutputLines?.push(line.text);
     options.onOutputLine(line);
-    options.logWriter(line.text);
+    queueLogWrite(line.text);
   };
 
   const stdoutEmitter = createBufferedLineEmitter((line) => {
@@ -174,20 +242,28 @@ async function executeShellCommand(
     await subprocess;
     stdoutEmitter.flushPendingLine();
     stderrEmitter.flushPendingLine();
-    return { capturedOutput: capturedOutputLines.join("\n") };
+    await waitForQueuedLogWrites();
+    return { capturedOutput: capturedOutputLines?.join("\n") };
   } catch (error) {
     stdoutEmitter.flushPendingLine();
     stderrEmitter.flushPendingLine();
 
-    const commandWasCanceledByUser = userCanceledSubprocesses.has(subprocess);
-    const failureSummaryLines = buildFailureSummaryLines(options.shellCommand, error);
+    const commandWasCanceledByUser = state.userCanceledSubprocesses.has(subprocess);
+    const failureSummaryLines = buildFailureSummaryLines({
+      shellCommand: options.shellCommand,
+      error,
+      stdoutTailLines: stdoutTailLines.lines(),
+      stderrTailLines: stderrTailLines.lines(),
+    });
     if (commandWasCanceledByUser) {
       failureSummaryLines.push("[braeburn] Command canceled by user input (q).");
     }
 
     for (const line of failureSummaryLines) {
-      await options.logWriter(line);
+      queueLogWrite(line);
     }
+
+    await waitForQueuedLogWrites();
 
     if (commandWasCanceledByUser) {
       throw new ShellCommandCanceledError(options.shellCommand, error);
@@ -195,23 +271,50 @@ async function executeShellCommand(
 
     throw error;
   } finally {
-    if (activeShellCommandSubprocess === subprocess) {
-      activeShellCommandSubprocess = undefined;
+    if (state.activeShellCommandSubprocess === subprocess) {
+      state.activeShellCommandSubprocess = undefined;
     }
   }
+}
+
+export function createShellCommandRunner(): ShellCommandRunner {
+  const state: ShellCommandRunnerState = {
+    activeShellCommandSubprocess: undefined,
+    userCanceledSubprocesses: new WeakSet<ShellCommandSubprocess>(),
+  };
+
+  return {
+    cancelActiveShellCommand(): boolean {
+      return cancelActiveShellCommandForState(state);
+    },
+
+    async runShellCommand(options: RunCommandOptions): Promise<void> {
+      await executeShellCommand(state, options);
+    },
+
+    async runShellCommandAndCaptureOutput(options: RunCommandOptions): Promise<string> {
+      const result = await executeShellCommand(state, options, "enabled");
+      return result.capturedOutput ?? "";
+    },
+  };
+}
+
+const defaultShellCommandRunner = createShellCommandRunner();
+
+export function cancelActiveShellCommand(): boolean {
+  return defaultShellCommandRunner.cancelActiveShellCommand();
 }
 
 export async function runShellCommand(
   options: RunCommandOptions
 ): Promise<void> {
-  await executeShellCommand(options);
+  await defaultShellCommandRunner.runShellCommand(options);
 }
 
 export async function runShellCommandAndCaptureOutput(
   options: RunCommandOptions,
 ): Promise<string> {
-  const result = await executeShellCommand(options);
-  return result.capturedOutput;
+  return defaultShellCommandRunner.runShellCommandAndCaptureOutput(options);
 }
 
 type CheckCommandOptions = {

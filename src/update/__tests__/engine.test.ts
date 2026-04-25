@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { runUpdateEngine, type ConfirmationAnswer } from "../engine.js";
+import { CURRENT_OUTPUT_LINE_LIMIT, runUpdateEngine, type ConfirmationAnswer } from "../engine.js";
 import type { Step, StepRunContext } from "../../steps/index.js";
 import type { CommandOutputLine } from "../../runner.js";
 import { ShellCommandCanceledError } from "../../runner.js";
@@ -261,6 +261,33 @@ describe("runUpdateEngine", () => {
         failureOutputLines: [{ text: "err-before-fail", source: "stderr" }],
       },
     ]);
+  });
+
+  it("keeps only the latest output lines in update state", async () => {
+    const { dependencies } = createEngineDependencies();
+
+    const failedRun = vi.fn(async (context: StepRunContext) => {
+      for (let lineNumber = 1; lineNumber <= CURRENT_OUTPUT_LINE_LIMIT + 5; lineNumber += 1) {
+        context.onOutputLine({ text: `line-${lineNumber}`, source: "stdout" });
+      }
+      throw new Error("step exploded");
+    });
+
+    const result = await runUpdateEngine({
+      steps: [makeStep({ id: "npm", name: "npm", run: failedRun })],
+      promptMode: "interactive",
+      version: "1.0.0",
+      logoVisibility: "hidden",
+      askForConfirmation: async () => "yes",
+      collectVersions: async () => [],
+      onStateChanged: () => {},
+      dependencies,
+    });
+
+    const completedStepRecord = result.completedStepRecords[0];
+    expect(completedStepRecord.failureOutputLines).toHaveLength(CURRENT_OUTPUT_LINE_LIMIT);
+    expect(completedStepRecord.failureOutputLines?.[0]).toEqual({ text: "line-6", source: "stdout" });
+    expect(completedStepRecord.failureOutputLines?.at(-1)).toEqual({ text: `line-${CURRENT_OUTPUT_LINE_LIMIT + 5}`, source: "stdout" });
   });
 
   it("creates a fallback failure output line when a step throws without streamed output", async () => {

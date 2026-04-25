@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, writeFile, mkdir, rm, readFile } from "node:fs/promises";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { stringify, parse } from "smol-toml";
-import type { BraeburnConfig } from "../config.js";
+import {
+  ConfigReadError,
+  readConfigFromPath,
+  writeConfigToPath,
+  type BraeburnConfig,
+} from "../config.js";
 
 let tempDir: string;
 let configPath: string;
@@ -18,13 +22,11 @@ afterEach(async () => {
 });
 
 async function writeTestConfig(config: BraeburnConfig): Promise<void> {
-  await writeFile(configPath, stringify(config as Record<string, unknown>), "utf-8");
+  await writeConfigToPath(configPath, config);
 }
 
 async function readTestConfig(): Promise<BraeburnConfig> {
-  const raw = await readFile(configPath, "utf-8");
-  const parsed = parse(raw) as Partial<BraeburnConfig>;
-  return { steps: parsed.steps ?? {}, logo: parsed.logo, defaultsProfile: parsed.defaultsProfile };
+  return readConfigFromPath(configPath);
 }
 
 describe("config file round-trips", () => {
@@ -81,5 +83,41 @@ pip = false
     const result = await readTestConfig();
     expect(result.logo).toBe(false);
     expect(result.steps).toEqual({});
+  });
+
+  it("uses an empty config when the config file is missing", async () => {
+    const result = await readConfigFromPath(join(tempDir, "missing-config"));
+
+    expect(result).toEqual({ steps: {} });
+  });
+
+  it("throws a config read error for malformed TOML", async () => {
+    await writeFile(configPath, "[steps\nnpm = false", "utf-8");
+
+    await expect(readConfigFromPath(configPath)).rejects.toBeInstanceOf(ConfigReadError);
+  });
+
+  it("throws a config read error when steps is not a table", async () => {
+    await writeFile(configPath, "steps = true\n", "utf-8");
+
+    await expect(readConfigFromPath(configPath)).rejects.toThrow('"steps" must be a table');
+  });
+
+  it("throws a config read error when a step value is not boolean", async () => {
+    await writeFile(configPath, "[steps]\nnpm = \"disabled\"\n", "utf-8");
+
+    await expect(readConfigFromPath(configPath)).rejects.toThrow('"steps.npm" must be true or false');
+  });
+
+  it("throws a config read error when logo is not boolean", async () => {
+    await writeFile(configPath, "logo = \"hidden\"\n", "utf-8");
+
+    await expect(readConfigFromPath(configPath)).rejects.toThrow('"logo" must be true or false');
+  });
+
+  it("throws a config read error when defaults profile is unknown", async () => {
+    await writeFile(configPath, "defaultsProfile = \"future\"\n", "utf-8");
+
+    await expect(readConfigFromPath(configPath)).rejects.toThrow('"defaultsProfile" must be "legacy" or "conservative-v2"');
   });
 });

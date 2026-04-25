@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   buildLoadingScreen,
+  buildConfigFromSetupItems,
+  buildSetupItems,
   buildSetupScreen,
   type SetupStepView,
   type SelectableStep,
 } from "../setup.js";
+import type { Step } from "../../steps/index.js";
 import { stripAnsi } from "../../__tests__/helpers.js";
 
 function makeStep(overrides: Partial<SetupStepView> = {}): SetupStepView {
@@ -23,6 +26,18 @@ function makeSelectableStep(overrides: Partial<SelectableStep> = {}): Selectable
     selection: "selected",
     protection: "configurable",
     availability: "available",
+    ...overrides,
+  };
+}
+
+function makeRuntimeStep(overrides: Partial<Step> = {}): Step {
+  return {
+    id: "npm",
+    name: "npm",
+    description: "Update npm",
+    categoryId: "cli-tools",
+    checkIsAvailable: async () => true,
+    run: async () => {},
     ...overrides,
   };
 }
@@ -243,5 +258,56 @@ describe("buildSetupScreen", () => {
     ].join("\n");
 
     expect(stripAnsi(buildSetupScreen([], 0))).toBe(expected);
+  });
+});
+
+describe("buildSetupItems", () => {
+  it("builds selectable rows from steps and availability", () => {
+    const homebrewStep = makeRuntimeStep({ id: "homebrew", name: "Homebrew", categoryId: "apps-packages" });
+    const nvmStep = makeRuntimeStep({ id: "nvm", name: "Node.js (nvm)", categoryId: "runtimes" });
+
+    const items = buildSetupItems([homebrewStep, nvmStep], [true, false]);
+
+    expect(items).toMatchObject([
+      {
+        step: { id: "homebrew", name: "Homebrew" },
+        selection: "selected",
+        protection: "protected",
+        availability: "available",
+      },
+      {
+        step: { id: "nvm", name: "Node.js (nvm)" },
+        selection: "deselected",
+        protection: "configurable",
+        availability: "unavailable",
+      },
+    ]);
+  });
+});
+
+describe("buildConfigFromSetupItems", () => {
+  it("builds the conservative setup config from selected configurable items", () => {
+    const config = buildConfigFromSetupItems([
+      makeSelectableStep({
+        protection: "protected",
+        step: makeStep({ id: "homebrew", name: "Homebrew" }),
+      }),
+      makeSelectableStep({
+        selection: "deselected",
+        step: makeStep({ id: "npm", name: "npm" }),
+      }),
+      makeSelectableStep({
+        selection: "selected",
+        step: makeStep({ id: "ohmyzsh", name: "Oh My Zsh" }),
+      }),
+    ]);
+
+    expect(config).toEqual({
+      defaultsProfile: "conservative-v2",
+      steps: {
+        npm: false,
+        ohmyzsh: true,
+      },
+    });
   });
 });

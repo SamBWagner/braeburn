@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir, access } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { parse, stringify } from "smol-toml";
 
@@ -23,15 +23,84 @@ const LOGO_SETTING_ID = "logo";
 const DEFAULTS_PROFILE_SETTING_ID = "defaultsProfile";
 const LEGACY_PROFILE: ConfigDefaultsProfile = "legacy";
 
+export class ConfigReadError extends Error {
+  readonly configPath: string;
+  readonly originalError: unknown;
+
+  constructor(configPath: string, originalError: unknown) {
+    const reason = originalError instanceof Error ? originalError.message : String(originalError);
+    super(`Could not read braeburn config at ${configPath}: ${reason}`);
+    this.name = "ConfigReadError";
+    this.configPath = configPath;
+    this.originalError = originalError;
+  }
+}
+
 function resolveDefaultsProfile(config: BraeburnConfig): ConfigDefaultsProfile {
   return config.defaultsProfile ?? LEGACY_PROFILE;
 }
 
 function parseDefaultsProfile(rawValue: unknown): ConfigDefaultsProfile | undefined {
+  if (rawValue === undefined) {
+    return undefined;
+  }
+
   if (rawValue === "legacy" || rawValue === "conservative-v2") {
     return rawValue;
   }
-  return undefined;
+
+  throw new Error(`"${DEFAULTS_PROFILE_SETTING_ID}" must be "legacy" or "conservative-v2".`);
+}
+
+function parseSteps(rawValue: unknown): Record<string, boolean> {
+  if (rawValue === undefined) {
+    return {};
+  }
+
+  if (typeof rawValue !== "object" || rawValue === null || Array.isArray(rawValue)) {
+    throw new Error('"steps" must be a table of step IDs to boolean values.');
+  }
+
+  const steps: Record<string, boolean> = {};
+
+  for (const [stepId, enabled] of Object.entries(rawValue)) {
+    if (typeof enabled !== "boolean") {
+      throw new Error(`"steps.${stepId}" must be true or false.`);
+    }
+    steps[stepId] = enabled;
+  }
+
+  return steps;
+}
+
+function parseLogo(rawValue: unknown): boolean | undefined {
+  if (rawValue === undefined || typeof rawValue === "boolean") {
+    return rawValue;
+  }
+
+  throw new Error('"logo" must be true or false.');
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+export function parseConfig(rawConfig: string): BraeburnConfig {
+  const parsed = parse(rawConfig) as Record<string, unknown>;
+  const steps = parseSteps(parsed.steps);
+  const logo = parseLogo(parsed.logo);
+  const defaultsProfile = parseDefaultsProfile(parsed[DEFAULTS_PROFILE_SETTING_ID]);
+  const config: BraeburnConfig = { steps };
+
+  if (logo !== undefined) {
+    config.logo = logo;
+  }
+
+  if (defaultsProfile !== undefined) {
+    config.defaultsProfile = defaultsProfile;
+  }
+
+  return config;
 }
 
 function isStepEnabledByDefault(profile: ConfigDefaultsProfile, stepId: string): boolean {
@@ -74,20 +143,29 @@ export async function configFileExists(): Promise<boolean> {
 
 export async function readConfig(): Promise<BraeburnConfig> {
   const configPath = await resolveConfigPath();
+  return readConfigFromPath(configPath);
+}
+
+export async function readConfigFromPath(configPath: string): Promise<BraeburnConfig> {
   try {
     const raw = await readFile(configPath, "utf-8");
-    const parsed = parse(raw) as Record<string, unknown>;
-    const parsedSteps = parsed.steps as Record<string, boolean> | undefined;
-    const defaultsProfile = parseDefaultsProfile(parsed[DEFAULTS_PROFILE_SETTING_ID]);
-    return { steps: parsedSteps ?? {}, logo: parsed.logo as boolean | undefined, defaultsProfile };
-  } catch {
-    return structuredClone(EMPTY_CONFIG);
+    return parseConfig(raw);
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return structuredClone(EMPTY_CONFIG);
+    }
+
+    throw new ConfigReadError(configPath, error);
   }
 }
 
 export async function writeConfig(config: BraeburnConfig): Promise<void> {
   const configPath = await resolveConfigPath();
-  await mkdir(join(configPath, ".."), { recursive: true });
+  await writeConfigToPath(configPath, config);
+}
+
+export async function writeConfigToPath(configPath: string, config: BraeburnConfig): Promise<void> {
+  await mkdir(dirname(configPath), { recursive: true });
   await writeFile(configPath, stringify(config as Record<string, unknown>), "utf-8");
 }
 
