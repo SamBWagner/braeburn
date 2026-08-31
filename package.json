@@ -4,7 +4,7 @@
   "description": "macOS system updater CLI",
   "type": "module",
   "bin": {
-    "braeburn": "./dist/index.js"
+    "braeburn": "dist/index.js"
   },
   "files": [
     "dist"
@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "chalk": "^5.3.0",
+    "chalk": "^6.0.0",
     "commander": "^14.0.0",
     "execa": "^9.3.0",
     "smol-toml": "^1.8.0"
@@ -32,5 +32,9 @@
     "tsx": "^4.23.13",
     "typescript": "^5.5.0",
     "vitest": "^4.1.11"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }
