@@ -1,5 +1,6 @@
 export type StepCategoryId =
   | "apps-packages"
+  | "aspire"
   | "cli-tools"
   | "runtimes"
   | "shell"
@@ -14,6 +15,7 @@ const STEP_CATEGORY_DEFINITIONS: StepCategoryDefinition[] = [
   { id: "runtimes", label: "Runtimes" },
   { id: "apps-packages", label: "Apps & Packages" },
   { id: "cli-tools", label: "CLI Tools" },
+  { id: "aspire", label: "Aspire" },
   { id: "shell", label: "Shell" },
   { id: "maintenance", label: "Maintenance" },
 ];

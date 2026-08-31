@@ -150,6 +150,9 @@ Step descriptions:
   pip        Update global pip3 packages (requires: pip3) ⚠ may be fragile
   dotnet     Update .NET global tools    (requires: dotnet)
 
+  System / Aspire:
+  aspire     Update Aspire CLI on the stable channel  (requires: aspire)
+
   System / Shell:
   ohmyzsh    Update Oh My Zsh            (requires: ~/.oh-my-zsh)
 

@@ -33,6 +33,7 @@ export { default as pipStep } from "./pip.js";
 export { default as pyenvStep } from "./pyenv.js";
 export { default as nvmStep } from "./nvm.js";
 export { default as dotnetStep } from "./dotnet.js";
+export { default as aspireStep } from "./aspire.js";
 export { default as macosStep } from "./macos.js";
 export { default as cleanupStep } from "./cleanup.js";
 export { default as braeburnStep } from "./braeburn.js";

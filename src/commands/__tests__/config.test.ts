@@ -102,6 +102,14 @@ describe("applyConfigUpdates", () => {
       expect(result.updatedConfig.steps.pyenv).toBe(true);
     });
 
+    it("behaves the same for aspire", () => {
+      const result = applyConfigUpdates(emptyConfig(), { aspire: "enable" });
+      expect(result.changes).toEqual([
+        { label: "aspire", from: "disable", to: "enable" },
+      ]);
+      expect(result.updatedConfig.steps.aspire).toBe(true);
+    });
+
     it("produces no changes when disabling an already-absent runtime step", () => {
       const result = applyConfigUpdates(emptyConfig(), { nvm: "disable" });
       expect(result.changes).toEqual([]);

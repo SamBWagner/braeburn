@@ -283,6 +283,21 @@ describe("buildSetupItems", () => {
       },
     ]);
   });
+
+  it("keeps Aspire deselected by default", () => {
+    const aspireStep = makeRuntimeStep({ id: "aspire", name: "Aspire", categoryId: "aspire" });
+
+    const items = buildSetupItems([aspireStep], [true]);
+
+    expect(items).toMatchObject([
+      {
+        step: { id: "aspire", name: "Aspire" },
+        selection: "deselected",
+        protection: "configurable",
+        availability: "available",
+      },
+    ]);
+  });
 });
 
 describe("buildConfigFromSetupItems", () => {

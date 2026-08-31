@@ -7,6 +7,7 @@ import {
   npmStep,
   pipStep,
   dotnetStep,
+  aspireStep,
   macosStep,
   cleanupStep,
   braeburnStep,
@@ -22,6 +23,7 @@ const STEP_BY_ID: Record<string, Step> = {
   npm: npmStep,
   pip: pipStep,
   dotnet: dotnetStep,
+  aspire: aspireStep,
   ohmyzsh: ohmyzshStep,
   cleanup: cleanupStep,
   braeburn: braeburnStep,
@@ -37,6 +39,7 @@ const STEP_EXECUTION_ORDER: string[] = [
   "braeburn",
   "pip",
   "dotnet",
+  "aspire",
   "ohmyzsh",
   "cleanup",
 ];

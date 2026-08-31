@@ -52,6 +52,15 @@ describe("isSettingEnabled", () => {
     expect(isSettingEnabled(conservativeConfig, "ohmyzsh")).toBe(false);
     expect(isSettingEnabled(conservativeConfig, "macos")).toBe(false);
   });
+
+  it("keeps Aspire disabled by default for legacy configs", () => {
+    expect(isSettingEnabled(emptyConfig(), "aspire")).toBe(false);
+  });
+
+  it("keeps Aspire disabled by default for conservative configs", () => {
+    const conservativeConfig: BraeburnConfig = { steps: {}, defaultsProfile: "conservative-v2" };
+    expect(isSettingEnabled(conservativeConfig, "aspire")).toBe(false);
+  });
 });
 
 describe("isStepEnabled", () => {
@@ -137,6 +146,17 @@ describe("applySettingToConfig", () => {
     const conservativeConfig: BraeburnConfig = { steps: {}, defaultsProfile: "conservative-v2" };
     const result = applySettingToConfig(conservativeConfig, "ohmyzsh", "enable");
     expect(result.steps.ohmyzsh).toBe(true);
+  });
+
+  it("stores explicit true when enabling Aspire for a legacy config", () => {
+    const result = applySettingToConfig(emptyConfig(), "aspire", "enable");
+    expect(result.steps.aspire).toBe(true);
+  });
+
+  it("stores explicit true when enabling Aspire for a conservative config", () => {
+    const conservativeConfig: BraeburnConfig = { steps: {}, defaultsProfile: "conservative-v2" };
+    const result = applySettingToConfig(conservativeConfig, "aspire", "enable");
+    expect(result.steps.aspire).toBe(true);
   });
 
   it("drops explicit value when disabling a conservative default-off step", () => {

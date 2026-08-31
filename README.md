@@ -45,6 +45,7 @@ Steps are grouped by system capability. For new setups, braeburn uses a conserva
 | `braeburn` | CLI Tools | on | `npm` |
 | `pip` | CLI Tools | on | `pip3` |
 | `dotnet` | CLI Tools | on | `dotnet` |
+| `aspire` | Aspire | off | `aspire` |
 | `ohmyzsh` | Shell | off | `~/.oh-my-zsh` |
 | `cleanup` (`homebrew cleanup`) | Maintenance | off | `brew` |
 

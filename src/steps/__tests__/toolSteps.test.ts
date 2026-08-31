@@ -12,6 +12,7 @@ vi.mock("../runtime.js", () => ({
 }));
 
 import cleanupStep from "../cleanup.js";
+import aspireStep from "../aspire.js";
 import braeburnStep from "../braeburn.js";
 import dotnetStep from "../dotnet.js";
 import homebrewStep from "../homebrew.js";
@@ -60,6 +61,12 @@ const commandBackedStepSpecs: CommandBackedStepSpec[] = [
     step: dotnetStep,
     availabilityCommand: "dotnet",
     runShellCommand: "dotnet tool update --global --all",
+  },
+  {
+    stepId: aspireStep.id,
+    step: aspireStep,
+    availabilityCommand: "aspire",
+    runShellCommand: "aspire update --self --channel stable",
   },
   {
     stepId: masStep.id,

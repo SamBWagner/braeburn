@@ -1,0 +1,1 @@
+This is a system updater CLI tool for MacOS. It's built for helping me manage and update my dependancies on my MacBook Pro. It's Open-Source and publicly available for download. But, it's mainly just built for me.

@@ -8,6 +8,7 @@ describe("step categories", () => {
       "runtimes",
       "apps-packages",
       "cli-tools",
+      "aspire",
       "shell",
       "maintenance",
     ]);
@@ -35,6 +36,7 @@ describe("step categories", () => {
       "braeburn",
       "pip",
       "dotnet",
+      "aspire",
       "ohmyzsh",
       "cleanup",
     ]);
