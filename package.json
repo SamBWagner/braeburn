@@ -24,7 +24,7 @@
   "dependencies": {
     "chalk": "^6.0.0",
     "commander": "^15.0.0",
-    "execa": "^9.3.0",
+    "execa": "^10.0.1",
     "smol-toml": "^1.8.0"
   },
   "devDependencies": {
