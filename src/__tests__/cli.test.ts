@@ -146,6 +146,69 @@ describe("createBraeburnProgram", () => {
 
     expect(dependencies.runLogCommand).toHaveBeenCalledWith({ stepId: "homebrew" });
   });
+
+  it("opens the interactive config editor when paired boolean options are omitted", async () => {
+    const npmStep = makeStep({ id: "npm", name: "npm", categoryId: "cli-tools" });
+    const dependencies = makeDependencies();
+    const { processLike } = makeProcessLike();
+    const program = createBraeburnProgram({
+      allSteps: [npmStep],
+      dependencies,
+      processLike,
+      version: "9.9.9",
+    });
+
+    await program.parseAsync(["config", "update"], { from: "user" });
+
+    expect(dependencies.runConfigCommand).toHaveBeenCalledWith({
+      allSteps: [npmStep],
+      outputMode: "interactive",
+    });
+    expect(dependencies.runConfigUpdateCommand).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { flag: "--no-logo", expectedUpdate: "disable" },
+    { flag: "--logo", expectedUpdate: "enable" },
+  ] as const)("maps $flag to an explicit logo update", async ({ flag, expectedUpdate }) => {
+    const dependencies = makeDependencies();
+    const { processLike } = makeProcessLike();
+    const program = createBraeburnProgram({
+      allSteps: [makeStep()],
+      dependencies,
+      processLike,
+      version: "9.9.9",
+    });
+
+    await program.parseAsync(["config", "update", flag], { from: "user" });
+
+    expect(dependencies.runConfigUpdateCommand).toHaveBeenCalledWith({
+      settingUpdates: { logo: expectedUpdate },
+      allSteps: [expect.objectContaining({ id: "homebrew" })],
+    });
+  });
+
+  it.each([
+    { flag: "--no-npm", expectedUpdate: "disable" },
+    { flag: "--npm", expectedUpdate: "enable" },
+  ] as const)("maps $flag to an explicit step update", async ({ flag, expectedUpdate }) => {
+    const npmStep = makeStep({ id: "npm", name: "npm", categoryId: "cli-tools" });
+    const dependencies = makeDependencies();
+    const { processLike } = makeProcessLike();
+    const program = createBraeburnProgram({
+      allSteps: [npmStep],
+      dependencies,
+      processLike,
+      version: "9.9.9",
+    });
+
+    await program.parseAsync(["config", "update", flag], { from: "user" });
+
+    expect(dependencies.runConfigUpdateCommand).toHaveBeenCalledWith({
+      settingUpdates: { npm: expectedUpdate },
+      allSteps: [npmStep],
+    });
+  });
 });
 
 describe("reportCliError", () => {
