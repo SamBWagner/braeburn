@@ -61,6 +61,13 @@ describe("isSettingEnabled", () => {
     const conservativeConfig: BraeburnConfig = { steps: {}, defaultsProfile: "conservative-v2" };
     expect(isSettingEnabled(conservativeConfig, "aspire")).toBe(false);
   });
+
+  it("keeps new opt-in tools disabled by default for existing and conservative configs", () => {
+    for (const stepId of ["rustup", "uv"]) {
+      expect(isSettingEnabled(emptyConfig(), stepId)).toBe(false);
+      expect(isSettingEnabled({ steps: {}, defaultsProfile: "conservative-v2" }, stepId)).toBe(false);
+    }
+  });
 });
 
 describe("isStepEnabled", () => {

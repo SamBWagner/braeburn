@@ -7,7 +7,7 @@ export const PROTECTED_STEP_IDS = new Set(["homebrew"]);
 
 export type ConfigDefaultsProfile = "legacy" | "conservative-v2";
 
-export const LEGACY_DEFAULT_OFF_STEP_IDS = new Set(["nvm", "pyenv", "aspire"]);
+export const LEGACY_DEFAULT_OFF_STEP_IDS = new Set(["nvm", "pyenv", "rustup", "uv", "aspire"]);
 export const CONSERVATIVE_DEFAULT_ON_STEP_IDS = new Set(["homebrew", "npm", "braeburn", "pip", "dotnet"]);
 
 export type BraeburnConfig = {

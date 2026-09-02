@@ -38,12 +38,14 @@ Steps are grouped by system capability. For new setups, braeburn uses a conserva
 |---|---|---|---|
 | `pyenv` | Runtimes | off | `pyenv` or Homebrew |
 | `nvm` | Runtimes | off | `~/.nvm` |
+| `rustup` | Runtimes | off | `rustup` |
 | `homebrew` | Apps & Packages | on | `brew` (required) |
 | `mas` | Apps & Packages | off | `mas` |
 | `macos` | Apps & Packages | off | — |
 | `npm` | CLI Tools | on | `npm` |
 | `braeburn` | CLI Tools | on | `npm` |
 | `pip` | CLI Tools | on | `pip3` |
+| `uv` | CLI Tools | off | `uv` |
 | `dotnet` | CLI Tools | on | `dotnet` |
 | `aspire` | Aspire | off | `aspire` |
 | `ohmyzsh` | Shell | off | `~/.oh-my-zsh` |

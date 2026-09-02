@@ -20,6 +20,8 @@ import masStep from "../mas.js";
 import npmStep from "../npm.js";
 import ohmyzshStep from "../ohmyzsh.js";
 import pipStep from "../pip.js";
+import rustupStep from "../rustup.js";
+import uvStep from "../uv.js";
 
 type CommandBackedStepSpec = {
   stepId: string;
@@ -61,6 +63,18 @@ const commandBackedStepSpecs: CommandBackedStepSpec[] = [
     step: dotnetStep,
     availabilityCommand: "dotnet",
     runShellCommand: "dotnet tool update --global --all",
+  },
+  {
+    stepId: rustupStep.id,
+    step: rustupStep,
+    availabilityCommand: "rustup",
+    runShellCommand: "rustup update",
+  },
+  {
+    stepId: uvStep.id,
+    step: uvStep,
+    availabilityCommand: "uv",
+    runShellCommand: "uv tool upgrade --all",
   },
   {
     stepId: aspireStep.id,

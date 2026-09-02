@@ -138,6 +138,7 @@ Step descriptions:
   System / Runtimes (default: off — larger changes, enabled intentionally):
   pyenv      Upgrade pyenv, install latest Python 3.x  (requires: pyenv or brew)
   nvm        Install latest Node.js via nvm             (requires: ~/.nvm)
+  rustup     Update installed Rust toolchains and rustup (requires: rustup)
 
   System / Apps & Packages:
   homebrew   Update Homebrew itself and all installed formulae
@@ -148,6 +149,7 @@ Step descriptions:
   npm        Update global npm packages  (requires: npm)
   braeburn   Update braeburn CLI itself  (requires: npm)
   pip        Update global pip3 packages (requires: pip3) ⚠ may be fragile
+  uv         Upgrade tools installed with uv (requires: uv)
   dotnet     Update .NET global tools    (requires: dotnet)
 
   System / Aspire:
@@ -165,7 +167,7 @@ Examples:
   braeburn -fy              Same as above
   braeburn homebrew npm     Run only the homebrew and npm steps
   braeburn homebrew -y      Run only homebrew, auto-accept
-  braeburn nvm pyenv        Run only the runtime steps
+  braeburn nvm pyenv rustup Run only the runtime steps
   `
     )
     .action(

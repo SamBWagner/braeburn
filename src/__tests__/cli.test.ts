@@ -132,6 +132,30 @@ describe("createBraeburnProgram", () => {
     });
   });
 
+  it("documents newly added tools in the detailed update help", () => {
+    const helpOutput: string[] = [];
+    const program = createBraeburnProgram({
+      allSteps: [
+        makeStep({ id: "rustup", name: "Rust (rustup)", categoryId: "runtimes" }),
+        makeStep({ id: "uv", name: "uv tools", categoryId: "cli-tools" }),
+      ],
+      dependencies: makeDependencies(),
+      processLike: makeProcessLike().processLike,
+      version: "9.9.9",
+    });
+    const updateCommand = program.commands.find((command) => command.name() === "update");
+    updateCommand?.configureOutput({ writeOut: (output) => helpOutput.push(output) });
+
+    updateCommand?.outputHelp();
+
+    const renderedHelp = helpOutput.join("");
+    expect(renderedHelp).toContain(
+      "rustup     Update installed Rust toolchains and rustup",
+    );
+    expect(renderedHelp).toContain("braeburn nvm pyenv rustup");
+    expect(renderedHelp).toContain("uv         Upgrade tools installed with uv");
+  });
+
   it("supports the documented log --brew alias", async () => {
     const dependencies = makeDependencies();
     const { processLike } = makeProcessLike();
@@ -189,26 +213,31 @@ describe("createBraeburnProgram", () => {
   });
 
   it.each([
-    { flag: "--no-npm", expectedUpdate: "disable" },
-    { flag: "--npm", expectedUpdate: "enable" },
-  ] as const)("maps $flag to an explicit step update", async ({ flag, expectedUpdate }) => {
-    const npmStep = makeStep({ id: "npm", name: "npm", categoryId: "cli-tools" });
-    const dependencies = makeDependencies();
-    const { processLike } = makeProcessLike();
-    const program = createBraeburnProgram({
-      allSteps: [npmStep],
-      dependencies,
-      processLike,
-      version: "9.9.9",
-    });
+    { stepId: "npm", stepName: "npm", flag: "--no-npm", expectedUpdate: "disable" },
+    { stepId: "npm", stepName: "npm", flag: "--npm", expectedUpdate: "enable" },
+    { stepId: "uv", stepName: "uv tools", flag: "--no-uv", expectedUpdate: "disable" },
+    { stepId: "uv", stepName: "uv tools", flag: "--uv", expectedUpdate: "enable" },
+  ] as const)(
+    "maps $flag to an explicit step update",
+    async ({ stepId, stepName, flag, expectedUpdate }) => {
+      const configuredStep = makeStep({ id: stepId, name: stepName, categoryId: "cli-tools" });
+      const dependencies = makeDependencies();
+      const { processLike } = makeProcessLike();
+      const program = createBraeburnProgram({
+        allSteps: [configuredStep],
+        dependencies,
+        processLike,
+        version: "9.9.9",
+      });
 
-    await program.parseAsync(["config", "update", flag], { from: "user" });
+      await program.parseAsync(["config", "update", flag], { from: "user" });
 
-    expect(dependencies.runConfigUpdateCommand).toHaveBeenCalledWith({
-      settingUpdates: { npm: expectedUpdate },
-      allSteps: [npmStep],
-    });
-  });
+      expect(dependencies.runConfigUpdateCommand).toHaveBeenCalledWith({
+        settingUpdates: { [stepId]: expectedUpdate },
+        allSteps: [configuredStep],
+      });
+    },
+  );
 });
 
 describe("reportCliError", () => {
