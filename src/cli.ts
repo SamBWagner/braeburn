@@ -150,6 +150,7 @@ Step descriptions:
   braeburn   Update braeburn CLI itself  (requires: npm)
   pip        Update global pip3 packages (requires: pip3) ⚠ may be fragile
   uv         Upgrade tools installed with uv (requires: uv)
+  gh         Upgrade installed GitHub CLI extensions (requires: gh)
   dotnet     Update .NET global tools    (requires: dotnet)
 
   System / Aspire:

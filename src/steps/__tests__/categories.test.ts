@@ -37,6 +37,7 @@ describe("step categories", () => {
       "braeburn",
       "pip",
       "uv",
+      "gh",
       "dotnet",
       "aspire",
       "ohmyzsh",

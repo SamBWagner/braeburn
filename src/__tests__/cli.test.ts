@@ -138,6 +138,7 @@ describe("createBraeburnProgram", () => {
       allSteps: [
         makeStep({ id: "rustup", name: "Rust (rustup)", categoryId: "runtimes" }),
         makeStep({ id: "uv", name: "uv tools", categoryId: "cli-tools" }),
+        makeStep({ id: "gh", name: "GitHub CLI extensions", categoryId: "cli-tools" }),
       ],
       dependencies: makeDependencies(),
       processLike: makeProcessLike().processLike,
@@ -154,6 +155,7 @@ describe("createBraeburnProgram", () => {
     );
     expect(renderedHelp).toContain("braeburn nvm pyenv rustup");
     expect(renderedHelp).toContain("uv         Upgrade tools installed with uv");
+    expect(renderedHelp).toContain("gh         Upgrade installed GitHub CLI extensions");
   });
 
   it("supports the documented log --brew alias", async () => {
@@ -217,6 +219,8 @@ describe("createBraeburnProgram", () => {
     { stepId: "npm", stepName: "npm", flag: "--npm", expectedUpdate: "enable" },
     { stepId: "uv", stepName: "uv tools", flag: "--no-uv", expectedUpdate: "disable" },
     { stepId: "uv", stepName: "uv tools", flag: "--uv", expectedUpdate: "enable" },
+    { stepId: "gh", stepName: "GitHub CLI extensions", flag: "--no-gh", expectedUpdate: "disable" },
+    { stepId: "gh", stepName: "GitHub CLI extensions", flag: "--gh", expectedUpdate: "enable" },
   ] as const)(
     "maps $flag to an explicit step update",
     async ({ stepId, stepName, flag, expectedUpdate }) => {

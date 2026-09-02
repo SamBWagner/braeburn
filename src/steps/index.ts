@@ -31,6 +31,7 @@ export { default as ohmyzshStep } from "./ohmyzsh.js";
 export { default as npmStep } from "./npm.js";
 export { default as pipStep } from "./pip.js";
 export { default as uvStep } from "./uv.js";
+export { default as ghStep } from "./gh.js";
 export { default as pyenvStep } from "./pyenv.js";
 export { default as nvmStep } from "./nvm.js";
 export { default as rustupStep } from "./rustup.js";

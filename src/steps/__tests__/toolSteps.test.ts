@@ -20,6 +20,7 @@ import masStep from "../mas.js";
 import npmStep from "../npm.js";
 import ohmyzshStep from "../ohmyzsh.js";
 import pipStep from "../pip.js";
+import ghStep from "../gh.js";
 import rustupStep from "../rustup.js";
 import uvStep from "../uv.js";
 
@@ -75,6 +76,12 @@ const commandBackedStepSpecs: CommandBackedStepSpec[] = [
     step: uvStep,
     availabilityCommand: "uv",
     runShellCommand: "uv tool upgrade --all",
+  },
+  {
+    stepId: ghStep.id,
+    step: ghStep,
+    availabilityCommand: "gh",
+    runShellCommand: "gh extension upgrade --all",
   },
   {
     stepId: aspireStep.id,

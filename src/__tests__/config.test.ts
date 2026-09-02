@@ -63,7 +63,7 @@ describe("isSettingEnabled", () => {
   });
 
   it("keeps new opt-in tools disabled by default for existing and conservative configs", () => {
-    for (const stepId of ["rustup", "uv"]) {
+    for (const stepId of ["rustup", "uv", "gh"]) {
       expect(isSettingEnabled(emptyConfig(), stepId)).toBe(false);
       expect(isSettingEnabled({ steps: {}, defaultsProfile: "conservative-v2" }, stepId)).toBe(false);
     }
